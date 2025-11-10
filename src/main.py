@@ -2,15 +2,10 @@ from datetime import datetime
 import sqlite3
 
 from os import getenv
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.errors import HttpError
 import gspread
 from gspread.utils import ValueInputOption
 
-from src.constants import TICKERS
-from src.db import inserir_dividendos_anuais_db, obter_acao_db
 from src.models.acao import AcaoModel
 from src.models.dividendo import DividendoModel
 from src.repositories.acao import AcaoRepository
@@ -19,9 +14,12 @@ from src.services.acao import AcaoService
 from src.services.dividendo import DividendoService
 from src.sheet import Cells
 from typing import Dict
+from dotenv import load_dotenv
 
 from src.utils.webdriver import WebDriver
 from src.utils.formatters import to_brl
+
+load_dotenv()
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
