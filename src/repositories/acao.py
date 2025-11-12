@@ -11,9 +11,9 @@ class AcaoRepository:
     def inserir(self, acao: AcaoModel):
         cursor = self.conn.cursor()
         cursor.execute('''
-            INSERT INTO acoes (ticker, cotacao, pl, pvp, dividend_yield, payout)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (acao.ticker, acao.cotacao, acao.pl, acao.pvp, acao.dividend_yield, acao.payout))
+            INSERT INTO acoes (ticker, cotacao, pl, pvp, dividend_yield, payout, setor, segmento)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (acao.ticker, acao.cotacao, acao.pl, acao.pvp, acao.dividend_yield, acao.payout, acao.setor, acao.segmento))
         self.conn.commit()
     
     def obter_por_ticker_e_data(self, ticker: str, date: str) -> AcaoModel | None:
@@ -36,6 +36,8 @@ class AcaoRepository:
             dividend_yield=dados_acao[5],
             payout=dados_acao[6],
             date=dados_acao[7],
+            setor=dados_acao[8],
+            segmento=dados_acao[9]
         )
     
 

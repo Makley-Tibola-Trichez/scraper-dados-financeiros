@@ -2,7 +2,7 @@ from enum import Enum
 from gspread.cell import Cell
 
 
-class Cols(Enum):
+class AcaoCols(Enum):
     TICKER = 1
     SETOR = TICKER + 1
     SEGMENTO = SETOR + 1
@@ -22,34 +22,40 @@ class Cols(Enum):
     CAGR_LUCROS_5_ANOS = CAGR_RECEITAS_5_ANOS + 1
     DIVIDA_LIQUIDA_SOBRE_PATRIMONIO = CAGR_LUCROS_5_ANOS + 1
     
-class Cells:
+class AcaoCells:
     def __init__(self, row: int):
         self.row = row
 
-    def _make_cell(self, col_enum, value: str | None, force_update: bool = False) -> Cell | None:
+    def __make_cell(self, col_enum, value: str | None, force_update: bool = False) -> Cell | None:
         if force_update or value is not None:
             return Cell(self.row, col_enum.value, value)
         return None
 
     def cell_cotacao(self, value: str | None, force_update: bool = False) -> Cell | None:
-        return self._make_cell(Cols.COTACAO, value, force_update)
+        return self.__make_cell(AcaoCols.COTACAO, value, force_update)
 
     def cell_pl(self, value: str | None, force_update: bool = False) -> Cell | None:
-        return self._make_cell(Cols.PL, value, force_update)
+        return self.__make_cell(AcaoCols.PL, value, force_update)
 
     def cell_pvp(self, value: str | None, force_update: bool = False) -> Cell | None:
-        return self._make_cell(Cols.PVP, value, force_update)
+        return self.__make_cell(AcaoCols.PVP, value, force_update)
     
     def cell_dividend_yield(self, value: str | None, force_update: bool = False) -> Cell | None:
-        return self._make_cell(Cols.DIVIDEND_YIELD, value, force_update)
+        return self.__make_cell(AcaoCols.DIVIDEND_YIELD, value, force_update)
 
     def cell_payout(self, value: str | None, force_update: bool = False) -> Cell | None:
-        return self._make_cell(Cols.PAYOUT, value, force_update)
+        return self.__make_cell(AcaoCols.PAYOUT, value, force_update)
 
     def cells_dividendos(self, values: list[str], force_update: bool = False) -> list[Cell]:
-        start_col = Cols.DIVIDENDO_ANUAL_2025.value
+        start_col = AcaoCols.DIVIDENDO_ANUAL_2025.value
         return [
             Cell(self.row, start_col + i, value)
             for i, value in enumerate(values)
             if force_update or value is not None
         ]
+    
+    def cell_setor(self, value: str | None, force_update: bool = False) -> Cell | None:
+        return self.__make_cell(AcaoCols.SETOR, value, force_update)
+
+    def cell_segmento_do_certo(self, value: str | None, force_update: bool = False) -> Cell | None:
+        return self.__make_cell(AcaoCols.SEGMENTO, value, force_update)

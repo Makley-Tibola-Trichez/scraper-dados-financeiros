@@ -11,3 +11,5 @@ class AcaoModel:
     dividend_yield: str
     payout: str
     date: str
+    setor: str
+    segmento: str

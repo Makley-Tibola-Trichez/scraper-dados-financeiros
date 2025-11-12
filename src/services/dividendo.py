@@ -5,6 +5,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from src.models.dividendo import DividendoModel
 from src.utils.webdriver import WebDriver
+from src.errors import SemHistoricoDeDividendos
 
 class DividendoService:
     def __init__(self, driver: WebDriver) -> None:
@@ -12,10 +13,14 @@ class DividendoService:
         
     def scrape(self, ticker: str): 
         self._driver.get(f'https://www.fundamentus.com.br/proventos.php?papel={ticker}&tipo=2')
-                
-        WebDriverWait(self._driver, 10).until(
-            EC.presence_of_element_located((By.ID, 'chbAgruparAno'))
-        ).click()
+        
+        try:
+            WebDriverWait(self._driver, 10).until(
+                EC.presence_of_element_located((By.ID, 'chbAgruparAno'))
+            ).click()
+        except:
+            raise SemHistoricoDeDividendos(ticker)
+      
         
         linhas = self._driver.find_elements(By.CSS_SELECTOR, '#resultado-anual > tbody > tr')
         
