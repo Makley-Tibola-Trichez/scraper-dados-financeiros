@@ -3,11 +3,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from src.models.dividendo import DividendoModel
+from src.models.dividendo import DividendoAnualModel
 from src.utils.webdriver import WebDriver
 from src.errors import SemHistoricoDeDividendos
 
-class DividendoService:
+class DividendoAnualService:
     def __init__(self, driver: WebDriver) -> None:
         self._driver = driver
         
@@ -28,7 +28,7 @@ class DividendoService:
             colunas = linha.find_elements(By.TAG_NAME, 'td')
             ano = colunas[0].text
             valor = float(colunas[1].text.replace('R$', '').replace(',', '.'))
-            yield DividendoModel(
+            yield DividendoAnualModel(
                 id=None,
                 ticker=ticker,
                 ano=ano,

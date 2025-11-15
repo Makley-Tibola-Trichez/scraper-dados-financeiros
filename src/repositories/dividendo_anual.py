@@ -3,15 +3,15 @@
 from sqlite3 import Connection
 
 from src.models.acao import AcaoModel
-from src.models.dividendo import DividendoModel
+from src.models.dividendo import DividendoAnualModel
 
 
-class DividendoRepository:
+class DividendoAnualRepository:
     
     def __init__(self, conn: Connection):
         self.conn = conn
         
-    def inserir(self, dividendo: DividendoModel):
+    def inserir(self, dividendo: DividendoAnualModel):
         cursor = self.conn.cursor()
         cursor.execute('''
             INSERT INTO dividendos_anuais (ticker, ano, valor)
@@ -24,7 +24,7 @@ class DividendoRepository:
               dividendo.ticker, dividendo.ano, dividendo.valor))
         self.conn.commit()
     
-    def inserir_anuais(self, dividendos: list[DividendoModel]):
+    def inserir_anuais(self, dividendos: list[DividendoAnualModel]):
         cursor = self.conn.cursor()
         for dividendo in dividendos:
             valor = (dividendo.ticker, dividendo.ano, dividendo.valor)
@@ -38,7 +38,7 @@ class DividendoRepository:
             ''', (*valor, *valor))
         self.conn.commit()
     
-    def obter_por_ticker(self, ticker: str) -> list[DividendoModel] | None:
+    def obter_por_ticker(self, ticker: str) -> list[DividendoAnualModel] | None:
         cursor = self.conn.cursor()
         cursor.execute('''
             SELECT id, ticker, ano, valor, date FROM dividendos_anuais
@@ -52,7 +52,7 @@ class DividendoRepository:
         if not valores:
             return None
         
-        return [DividendoModel(id=v[0], ticker=v[1],ano=v[2], valor=v[3], date=v[4]) for v in valores]
+        return [DividendoAnualModel(id=v[0], ticker=v[1],ano=v[2], valor=v[3], date=v[4]) for v in valores]
         
         
     

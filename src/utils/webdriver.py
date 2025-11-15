@@ -2,9 +2,12 @@
 
 
 from selenium.webdriver import Chrome, ChromeOptions
+from selenium.webdriver.chrome.service import Service
 
 
 class WebDriver(Chrome):
+    def __init__(self, options: ChromeOptions ) -> None:
+        super().__init__(options)
     pass
 
 
@@ -13,6 +16,10 @@ class WebDriverUtils(ChromeOptions):
     @staticmethod
     def get_options():
         options = ChromeOptions()
-        options.add_argument('--headless')
+        options.add_argument("--headless=new")  # Novo modo headless (mais estável no Chrome 109+)
+        options.add_argument("--disable-gpu")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--window-size=1920,1080")
 
         return options

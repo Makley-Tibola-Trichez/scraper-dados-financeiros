@@ -2,7 +2,7 @@
 
 from sqlite3 import Connection
 from src.models.acao import AcaoModel
-from src.models.dividendo import DividendoModel
+from src.models.dividendo import DividendoAnualModel
 
 
     
@@ -26,6 +26,8 @@ def obter_acao_db(connection: Connection, ticker: str) -> AcaoModel | None:
         dividend_yield=dados_acao[5],
         payout=dados_acao[6],
         date=dados_acao[7],
+        setor=dados_acao[8],
+        segmento=dados_acao[9]
     )
 
 def inserir_acao_db(connection: Connection, acao: AcaoModel):
@@ -36,7 +38,7 @@ def inserir_acao_db(connection: Connection, acao: AcaoModel):
     ''', (acao.ticker, acao.cotacao, acao.pl, acao.pvp, acao.dividend_yield, acao.payout))
     connection.commit()
     
-def inserir_dividendos_anuais_db(connection: Connection, dividendos: list[DividendoModel]):
+def inserir_dividendos_anuais_db(connection: Connection, dividendos: list[DividendoAnualModel]):
     cursor = connection.cursor()
     for dividendo in dividendos:
         dados_dividendo = (dividendo.ticker, dividendo.ano, dividendo.valor)

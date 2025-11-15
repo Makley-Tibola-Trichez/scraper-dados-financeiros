@@ -59,3 +59,6 @@ class AcaoCells:
 
     def cell_segmento_do_certo(self, value: str | None, force_update: bool = False) -> Cell | None:
         return self.__make_cell(AcaoCols.SEGMENTO, value, force_update)
+    
+    def cell_media_dividendos_12_meses(self, value: str | None, force_update: bool = False) -> Cell | None:
+        return self.__make_cell(AcaoCols.MEDIA_DIVIDENDOS_12_MESES, value, force_update)

@@ -3,11 +3,11 @@ from sqlite3 import Connection
 from utils.webdriver import WebDriver
 from utils.datetime import DatetimeUtils
 from src.models.acao import AcaoModel
-from src.models.dividendo import DividendoModel
+from src.models.dividendo import DividendoAnualModel
 from src.repositories.acao import AcaoRepository
-from src.repositories.dividendo import DividendoRepository
+from repositories.dividendo_anual import DividendoAnualRepository
 from src.services.acao import AcaoService
-from src.services.dividendo import DividendoService
+from services.dividendo_anual import DividendoAnualService
 from gspread.utils import ValueInputOption
 from src.utils.formatters import to_brl
 from typing import Dict
@@ -23,7 +23,7 @@ def fiisScrapper(
 
 
   fiis: list[FiiModel] = []
-  dividendo_de_fii = Dict[str, list[DividendoModel]] = {}
+  dividendo_de_fii = Dict[str, list[DividendoAnualModel]] = {}
 
   HOJE = DatetimeUtils.hoje()
 
