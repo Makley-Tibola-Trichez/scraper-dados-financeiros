@@ -1,0 +1,8 @@
+PRAGMA foreign_keys=off;
+
+BEGIN TRANSACTION;
+ALTER TABLE acoes ADD COLUMN vpa REAL;
+ALTER TABLE acoes ADD COLUMN lpa REAL;
+ALTER TABLE acoes ADD COLUMN roe REAL;
+COMMIT;
+PRAGMA foreign_keys=on;

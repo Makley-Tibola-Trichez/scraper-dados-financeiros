@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from typing import Optional
+
 
 @dataclass
-class AcaoModel: 
-    id: Optional[int]
+class AcaoModel:
+    id: int | None
     ticker: str
     cotacao: str
     pl: str
@@ -13,3 +13,6 @@ class AcaoModel:
     date: str
     setor: str
     segmento: str
+    vpa: str
+    lpa: str
+    roe: str

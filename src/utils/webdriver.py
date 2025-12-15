@@ -1,21 +1,18 @@
-
-
-
-from selenium.webdriver import Chrome, ChromeOptions
-from selenium.webdriver.chrome.service import Service
+from selenium.webdriver import Chrome
+from selenium.webdriver.chrome.options import Options
 
 
 class WebDriver(Chrome):
-    def __init__(self, options: ChromeOptions ) -> None:
+    def __init__(self, options: Options) -> None:
         super().__init__(options)
+
     pass
 
 
-
-class WebDriverUtils(ChromeOptions):
+class WebDriverUtils:
     @staticmethod
-    def get_options():
-        options = ChromeOptions()
+    def get_options() -> Options:
+        options = Options()
         options.add_argument("--headless=new")  # Novo modo headless (mais estável no Chrome 109+)
         options.add_argument("--disable-gpu")
         options.add_argument("--no-sandbox")
