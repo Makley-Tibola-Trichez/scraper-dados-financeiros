@@ -166,5 +166,5 @@ dev = [
 [tool.ruff]
 line-length = 120
 select = ["E", "F", "W", "C90", "B", "ANN", "COM", "N", "Q", "S", "UP", "I"]
-ignore = ["E501"]
+ignore = ["E501", "N812", "COM812"]
 exclude = ["build/", "dist/", ".venv/"]

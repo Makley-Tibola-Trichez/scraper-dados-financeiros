@@ -3,6 +3,7 @@ from datetime import datetime
 from selenium.webdriver.common.by import By
 
 from ..models.dividendo import DividendoHistoricoModel
+from ..utils.acessos import acessar_acao_investidor10
 from ..utils.logger import logger
 from ..utils.webdriver import WebDriver
 
@@ -12,9 +13,7 @@ class DividendoHistoricoService:
         self._driver = driver
 
     def scrape(self, ticker: str) -> list[DividendoHistoricoModel]:
-        self._driver.get(
-            f"https://www.fundamentus.com.br/proventos.php?papel={ticker}&tipo=2"
-        )
+        acessar_acao_investidor10(self._driver, ticker)
 
         linhas = self._driver.find_elements(By.CSS_SELECTOR, "#resultado > tbody > tr")
 

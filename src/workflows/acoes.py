@@ -4,9 +4,8 @@ from sqlite3 import Connection
 from gspread import Cell, Client
 from gspread.utils import ValueInputOption
 
-from sheet.acao_cells import AcaoCells
-
-from ..errors import SemHistoricoDeDividendos
+from ..config.config import Config
+from ..errors import SemHistoricoDeDividendosError
 from ..models.acao import AcaoModel
 from ..models.dividendo import DividendoAnualModel
 from ..repositories.acao import AcaoRepository
@@ -15,6 +14,7 @@ from ..repositories.dividendo_historico import DividendoHistoricoRepository
 from ..services.acao import AcaoService
 from ..services.dividendo_anual import DividendoAnualService
 from ..services.dividendo_historico import DividendoHistoricoService
+from ..sheet.acao_cells import AcaoCells
 from ..utils.datetime import DatetimeUtils
 from ..utils.formatters import to_brl
 from ..utils.logger import logger
@@ -27,7 +27,7 @@ def scrapper_acoes(
     driver: WebDriver,
     conn: Connection,
 ) -> None:
-    sheet = gc.open_by_key(spreadsheet_id).sheet1
+    sheet = gc.open_by_key(spreadsheet_id).get_worksheet_by_id(Config.id_worksheet_acoes_teto_bazin)
     tickers_existentes = sheet.col_values(1)
 
     acao_service = AcaoService(driver)
@@ -94,7 +94,7 @@ def scrapper_acoes(
                         logger.info(f"Dividendo {ticker} não encontrado.")
                     else:
                         dividendos_de_acao[ticker] = dividendos_anuais
-            except SemHistoricoDeDividendos as e:
+            except SemHistoricoDeDividendosError as e:
                 logger.warning(e.mensagem)
                 continue
         else:
@@ -106,6 +106,7 @@ def scrapper_acoes(
         if acao.ticker not in tickers_existentes:
             continue
 
+        logger.info(f"{acao.ticker}, gerando células com novos valores")
         linha = tickers_existentes.index(acao.ticker) + 1
         acao_cells = AcaoCells(linha)
 
@@ -162,4 +163,6 @@ def scrapper_acoes(
         if len(dividendos_cells) > 0:
             cells_to_update.extend(dividendos_cells)
 
+    logger.info("Atualizando planilha")
     sheet.update_cells(cells_to_update, value_input_option=ValueInputOption.user_entered)
+    logger.info("Planilha atualizada")

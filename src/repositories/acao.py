@@ -1,9 +1,7 @@
-
-
 from sqlite3 import Connection
 from typing import Any
 
-from src.models.acao import AcaoModel
+from ..models.acao import AcaoModel
 
 
 class AcaoRepository:
@@ -24,7 +22,7 @@ class AcaoRepository:
             segmento=row[9],
             vpa=row[10],
             lpa=row[11],
-            roe=row[12]
+            roe=row[12],
         )
 
     def verificar_se_existem_tickers(self, tickers: list[Any], date: str) -> list[tuple[str, AcaoModel | None]]:
@@ -32,13 +30,15 @@ class AcaoRepository:
 
         placeholders = ",".join("?" * len(tickers))
 
-        cursor.execute(f"""
+        cursor.execute(
+            f"""
             SELECT *
             FROM acoes
             WHERE date = ?
             AND ticker in ({placeholders})
-        """, (date, *tickers))  # noqa: S608 Está inserindo a quantidade necessária de parâmetros, não há risco de SQL Injection.
-
+        """,  # noqa: S608 Está inserindo a quantidade necessária de parâmetros, não há risco de SQL Injection.
+            (date, *tickers),
+        )
 
         acoes: list[tuple[str, AcaoModel | None]] = []
 
@@ -56,7 +56,8 @@ class AcaoRepository:
 
     def inserir(self, acao: AcaoModel) -> AcaoModel:
         cursor = self.conn.cursor()
-        cursor = cursor.execute("""
+        cursor = cursor.execute(
+            """
             INSERT INTO acoes (
                 ticker,
                 cotacao,
@@ -72,25 +73,27 @@ class AcaoRepository:
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING *
-        """, (
-            acao.ticker,
-            acao.cotacao,
-            acao.pl,
-            acao.pvp,
-            acao.vpa,
-            acao.lpa,
-            acao.roe,
-            acao.dividend_yield,
-            acao.payout,
-            acao.setor,
-            acao.segmento,
-        ))
+        """,
+            (
+                acao.ticker,
+                acao.cotacao,
+                acao.pl,
+                acao.pvp,
+                acao.vpa,
+                acao.lpa,
+                acao.roe,
+                acao.dividend_yield,
+                acao.payout,
+                acao.setor,
+                acao.segmento,
+            ),
+        )
 
         id, ticker, cotacao, pl, pvp, dividend_yield, payout, date, setor, segmento, vpa, lpa, roe = cursor.fetchone()
 
         self.conn.commit()
         cursor.close()
-        acao =  AcaoModel(
+        acao = AcaoModel(
             id=id,
             ticker=ticker,
             cotacao=cotacao,
@@ -108,13 +111,15 @@ class AcaoRepository:
 
         return acao
 
-
     def obter_por_ticker_e_data(self, ticker: str, date: str) -> AcaoModel | None:
         cursor = self.conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT * FROM acoes
             WHERE ticker = ? AND date = ?
-        """, (ticker, date))
+        """,
+            (ticker, date),
+        )
 
         dados_acao = cursor.fetchone()
         cursor.close()
@@ -134,19 +139,20 @@ class AcaoRepository:
             segmento=dados_acao[9],
             vpa=dados_acao[10],
             lpa=dados_acao[11],
-            roe=dados_acao[12]
+            roe=dados_acao[12],
         )
-
 
     def existe(self, ticker: str, date: str) -> bool:
         cursor = self.conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT 1 FROM acoes
             WHERE ticker = ? AND date = ?
-        """, (ticker, date))
+        """,
+            (ticker, date),
+        )
 
         existe = cursor.fetchone() is not None
 
         cursor.close()
         return existe
-

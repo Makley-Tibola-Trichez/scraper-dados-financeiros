@@ -1,66 +1,71 @@
-
-
 from sqlite3 import Connection
 
-from src.models.acao import AcaoModel
-from src.models.dividendo import DividendoAnualModel
+from ..models.dividendo import DividendoAnualModel
 
 
 class DividendoAnualRepository:
-    
-    def __init__(self, conn: Connection):
+    def __init__(self, conn: Connection) -> None:
         self.conn = conn
-        
-    def inserir(self, dividendo: DividendoAnualModel):
+
+    def inserir(self, dividendo: DividendoAnualModel) -> None:
         cursor = self.conn.cursor()
-        cursor.execute('''
+        cursor.execute(
+            """
             INSERT INTO dividendos_anuais (ticker, ano, valor)
             SELECT ?, ?, ?
             WHERE NOT EXISTS (
                 SELECT 1 FROM dividendos_anuais
                 WHERE ticker = ? AND ano = ? AND valor = ?
             )
-        ''', (dividendo.ticker, dividendo.ano, dividendo.valor,
-              dividendo.ticker, dividendo.ano, dividendo.valor))
+        """,
+            (dividendo.ticker, dividendo.ano, dividendo.valor, dividendo.ticker, dividendo.ano, dividendo.valor),
+        )
         self.conn.commit()
-    
-    def inserir_anuais(self, dividendos: list[DividendoAnualModel]):
+
+    def inserir_anuais(self, dividendos: list[DividendoAnualModel]) -> None:
         cursor = self.conn.cursor()
         for dividendo in dividendos:
             valor = (dividendo.ticker, dividendo.ano, dividendo.valor)
-            cursor.execute('''
+            cursor.execute(
+                """
                 INSERT INTO dividendos_anuais (ticker, ano, valor)
                 SELECT ?, ?, ?
                 WHERE NOT EXISTS (
                     SELECT 1 FROM dividendos_anuais
                     WHERE ticker = ? AND ano = ? AND valor = ?
                 )
-            ''', (*valor, *valor))
+            """,
+                (*valor, *valor),
+            )
         self.conn.commit()
-    
+
     def obter_por_ticker(self, ticker: str) -> list[DividendoAnualModel] | None:
         cursor = self.conn.cursor()
-        cursor.execute('''
+        cursor.execute(
+            """
             SELECT id, ticker, ano, valor, date FROM dividendos_anuais
             WHERE ticker = ?
             ORDER BY ano DESC
             LIMIT 4
-        ''', (ticker,))
-        
+        """,
+            (ticker,),
+        )
+
         valores = cursor.fetchall()
-        
+
         if not valores:
             return None
-        
-        return [DividendoAnualModel(id=v[0], ticker=v[1],ano=v[2], valor=v[3], date=v[4]) for v in valores]
-        
-        
-    
+
+        return [DividendoAnualModel(id=v[0], ticker=v[1], ano=v[2], valor=v[3], date=v[4]) for v in valores]
+
     def exists(self, ticker: str, ano: str, valor: float) -> bool:
         cursor = self.conn.cursor()
-        cursor.execute('''
+        cursor.execute(
+            """
             SELECT 1 FROM dividendos_anuais
             WHERE ticker = ? AND ano = ? AND valor = ?
-        ''', (ticker, ano, valor))
-        
+        """,
+            (ticker, ano, valor),
+        )
+
         return cursor.fetchone() is not None

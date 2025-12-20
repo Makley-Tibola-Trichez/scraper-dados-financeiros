@@ -1,16 +1,19 @@
-from src.models.acao import AcaoModel
-from src.utils.webdriver import WebDriver
-from src.utils.investidor10 import Investidor10
-from src.utils.datetime import DatetimeUtils
+from logging import Logger
+
+from ..models.acao import AcaoModel
+from ..utils.datetime import DatetimeUtils
+from ..utils.investidor10_acao import Investidor10Acao
+from ..utils.webdriver import WebDriver
 
 
 class AcaoService:
-    def __init__(self, driver: WebDriver) -> None:
+    def __init__(self, driver: WebDriver, logger: Logger) -> None:
         self.__driver = driver
+        self._logger = logger
 
     def scrape(self, ticker: str) -> AcaoModel:
         self.__driver.get(f"https://investidor10.com.br/acoes/{ticker}")
-        scrap = Investidor10(self.__driver)
+        scrap = Investidor10Acao(self.__driver, logger=self._logger)
 
         cotacao = scrap.get_cotacao()
         pl = scrap.get_pl()

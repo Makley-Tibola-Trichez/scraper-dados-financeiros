@@ -6,8 +6,6 @@ class WebDriver(Chrome):
     def __init__(self, options: Options) -> None:
         super().__init__(options)
 
-    pass
-
 
 class WebDriverUtils:
     @staticmethod

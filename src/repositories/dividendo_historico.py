@@ -1,11 +1,10 @@
 from datetime import datetime
 from sqlite3 import Connection, IntegrityError
 
-from src.models.dividendo import DividendoHistoricoModel
+from ..models.dividendo import DividendoHistoricoModel
 
 
 class DividendoHistoricoRepository:
-
     def __init__(self, conn: Connection) -> None:
         self.conn = conn
 
@@ -53,9 +52,8 @@ class DividendoHistoricoRepository:
                 INSERT INTO dividendos_historico
                     (ticker, valor, data_anuncio, data_pagamento, tipo)
                 VALUES (?, ?, ?, ?, ?)
-                """
-                ,
-                valores
+                """,
+                valores,
             )
             self.conn.commit()
         except IntegrityError:
@@ -70,7 +68,7 @@ class DividendoHistoricoRepository:
             f"""
             SELECT *
             FROM dividendos_historico
-            WHERE ticker IN ({','.join(['?'] * len(tickers))})
+            WHERE ticker IN ({",".join(["?"] * len(tickers))})
             ORDER BY data_anuncio
             """,  # noqa: S608 Está inserindo a quantidade necessária de parâmetros, não há risco de SQL Injection.
             tickers,
