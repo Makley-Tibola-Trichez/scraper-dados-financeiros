@@ -30,7 +30,7 @@ def scrapper_acoes(
     sheet = gc.open_by_key(spreadsheet_id).get_worksheet_by_id(Config.id_worksheet_acoes_teto_bazin)
     tickers_existentes = sheet.col_values(1)
 
-    acao_service = AcaoService(driver)
+    acao_service = AcaoService(driver, logger)
     dividendo_anual_service = DividendoAnualService(driver)
     dividendo_historico_service = DividendoHistoricoService(driver)
     acao_repository = AcaoRepository(conn)
