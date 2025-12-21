@@ -50,13 +50,17 @@ def scrapper_acoes(
             logger.info(f"Ação {ticker} já existe no banco de dados para a data {hoje}.")
             acoes.append(acao)
         else:
-            acao = acao_service.scrape(ticker=str(ticker))
-            if acao is not None:
-                acao = acao_repository.inserir(acao)
-                acoes.append(acao)
-                logger.info(f"Ação {ticker} inserida no banco de dados.")
-            else:
-                logger.warning(f"Ação {ticker} não encontrada.")
+            try:
+                acao = acao_service.scrape(ticker=str(ticker))
+                if acao is not None:
+                    acao = acao_repository.inserir(acao)
+                    acoes.append(acao)
+                    logger.info(f"Ação {ticker} inserida no banco de dados.")
+                else:
+                    logger.warning(f"Ação {ticker} não encontrada.")
+            except Exception as e:
+                logger.error(f"Erro ao fazer scrape da ação {ticker}: {e}")
+                continue
 
         dividendos_anuais: list[DividendoAnualModel] | None = dividendo_anual_repository.obter_por_ticker(ticker)
 

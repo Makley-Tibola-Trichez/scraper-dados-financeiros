@@ -1,6 +1,7 @@
 from logging import Logger
 
 from ..models.acao import AcaoModel
+from ..utils.acessos import acessar_acao_investidor10
 from ..utils.datetime import DatetimeUtils
 from ..utils.investidor10_acao import Investidor10Acao
 from ..utils.webdriver import WebDriver
@@ -12,7 +13,8 @@ class AcaoService:
         self._logger = logger
 
     def scrape(self, ticker: str) -> AcaoModel:
-        self.__driver.get(f"https://investidor10.com.br/acoes/{ticker}")
+        self._logger.info(f"Iniciando scrape da ação: {ticker}")
+        acessar_acao_investidor10(self.__driver, ticker)
         scrap = Investidor10Acao(self.__driver, logger=self._logger)
 
         cotacao = scrap.get_cotacao()
