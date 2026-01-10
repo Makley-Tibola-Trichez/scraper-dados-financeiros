@@ -1,6 +1,5 @@
 import sqlite3
 from os import getenv
-import threading
 
 import gspread
 from dotenv import load_dotenv
