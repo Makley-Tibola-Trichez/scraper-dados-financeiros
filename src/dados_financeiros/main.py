@@ -18,6 +18,10 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 SPREADSHEET_ID = getenv("SPREADSHEET_ID")
 
 
+def log_query(sql: str) -> None:
+    logger.debug(sql)
+
+
 def main() -> None:
     if SPREADSHEET_ID is None:
         raise ValueError("SPREADSHEET_ID environment variable not set")
@@ -35,10 +39,3 @@ def main() -> None:
 
     except Exception as err:
         logger.error(err, exc_info=True)
-
-
-def log_query(sql: str) -> None:
-    logger.debug(sql)
-
-
-main()
