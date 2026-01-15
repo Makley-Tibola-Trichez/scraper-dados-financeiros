@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlite3 import Connection, IntegrityError
 
 from ..models.dividendo import DividendoHistoricoModel
@@ -18,7 +18,7 @@ class DividendoHistoricoRepository:
         return DividendoHistoricoModel(
             ticker=ticker,
             data=data,
-            data_anuncio=datetime.fromisoformat(data_anuncio),
+            data_anuncio=datetime.fromisoformat(data_anuncio).replace(tzinfo=timezone.utc),
             data_pagamento=data_pagamento_tratada,
             tipo=tipo,
             valor=valor,

@@ -3,6 +3,8 @@ from sqlite3 import Connection
 from gspread import Cell, Client
 from gspread.utils import ValueInputOption
 
+from dados_financeiros.utils.progresso_processo import ProgressoProcessos
+
 from ..config.config import Config
 from ..models.fii import FiiModel
 from ..repositories.fii import FiiRepository
@@ -25,7 +27,13 @@ def scrapper_fiis(gc: Client, spreadsheet_id: str, driver: WebDriver, conn: Conn
 
     tickers = fii_repository.verificar_se_existem_tickers(tickers_existentes[1:], hoje)
 
-    for ticker, fii in tickers:
+    processo_scrape_fiis = ProgressoProcessos(
+        total_processos=len(tickers),
+        descricao_tipo_processo="Scrape de FIIs",
+    )
+
+    for i, (ticker, fii) in enumerate(tickers):
+        processo_scrape_fiis.atualizar_progresso(nome_processo=str(ticker), indice_processo=i + 1)
         if fii is not None:
             logger.info(f"FII {ticker} já existe no banco de dados para a data {hoje}")
             fiis.append(fii)
@@ -38,8 +46,13 @@ def scrapper_fiis(gc: Client, spreadsheet_id: str, driver: WebDriver, conn: Conn
             else:
                 logger.warning(f"FII {ticker} não encontrado.")
 
+    processo_atualizacao_planilhas_fiis = ProgressoProcessos(
+        total_processos=len(fiis),
+        descricao_tipo_processo="Atualização de Planilha de FIIs",
+    )
     cells_to_update: list[Cell] = []
-    for fii in fiis:
+    for i, fii in enumerate(fiis):
+        processo_atualizacao_planilhas_fiis.atualizar_progresso(nome_processo=fii.ticker, indice_processo=i + 1)
         if fii.ticker not in tickers_existentes:
             continue
         logger.info(f"{fii.ticker}, gerando células com novos valores")

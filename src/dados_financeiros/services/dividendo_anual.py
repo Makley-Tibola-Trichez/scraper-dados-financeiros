@@ -6,7 +6,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from ..errors import SemHistoricoDeDividendosError
 from ..models.dividendo import DividendoAnualModel
-from ..utils.acessos import acessar_fundamentus
+from ..utils.acessos import acessar_fundamentus_proventos
 from ..utils.webdriver import WebDriver
 
 
@@ -15,7 +15,7 @@ class DividendoAnualService:
         self._driver = driver
 
     def scrape(self, ticker: str) -> Generator[DividendoAnualModel, None, None]:
-        acessar_fundamentus(self._driver, ticker)
+        acessar_fundamentus_proventos(self._driver, ticker)
 
         try:
             WebDriverWait(self._driver, 10).until(EC.presence_of_element_located((By.ID, "chbAgruparAno"))).click()

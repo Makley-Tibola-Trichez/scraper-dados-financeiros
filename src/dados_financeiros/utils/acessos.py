@@ -1,8 +1,8 @@
 from .webdriver import WebDriver
 
 
-def acessar_fundamentus(driver: WebDriver, ticker: str) -> None:
-    driver.get(f"https://www.fundamentus.com.br/detalhes.php?papel={ticker}&tipo=2")
+def acessar_fundamentus_proventos(driver: WebDriver, ticker: str) -> None:
+    driver.get(f"https://www.fundamentus.com.br/proventos.php?papel={ticker}&tipo=2")
 
 
 def acessar_acao_investidor10(driver: WebDriver, ticker: str) -> None:

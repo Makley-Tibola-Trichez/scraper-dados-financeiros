@@ -4,6 +4,8 @@ from sqlite3 import Connection
 from gspread import Cell, Client
 from gspread.utils import ValueInputOption
 
+from dados_financeiros.utils.progresso_processo import ProgressoProcessos
+
 from ..config.config import Config
 from ..errors import SemHistoricoDeDividendosError
 from ..models.acao import AcaoModel
@@ -45,7 +47,12 @@ def scrapper_acoes(
     hoje = DatetimeUtils.hoje()
     um_ano_atras = DatetimeUtils.hoje_datetime() - timedelta(days=365)
 
-    for ticker, acao in tickers:
+    processo_scrape_acoes = ProgressoProcessos(
+        total_processos=len(tickers),
+        descricao_tipo_processo="Scrape de Ações",
+    )
+    for i, (ticker, acao) in enumerate(tickers):
+        processo_scrape_acoes.atualizar_progresso(nome_processo=str(ticker), indice_processo=i + 1)
         if acao is not None:
             logger.info(f"Ação {ticker} já existe no banco de dados para a data {hoje}.")
             acoes.append(acao)
@@ -106,7 +113,16 @@ def scrapper_acoes(
             logger.info(f"[{ticker}] - Dividendo já existe no banco de dados.")
 
     cells_to_update: list[Cell] = []
+
+    processo_atualizacao_planilhas_acoes = ProgressoProcessos(
+        total_processos=len(acoes),
+        descricao_tipo_processo="Atualização de Planilha de Ações",
+    )
+
     for acao in acoes:
+        processo_atualizacao_planilhas_acoes.atualizar_progresso(
+            nome_processo=acao.ticker, indice_processo=acoes.index(acao) + 1
+        )
         if acao.ticker not in tickers_existentes:
             continue
 

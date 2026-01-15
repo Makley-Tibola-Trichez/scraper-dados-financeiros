@@ -3,7 +3,6 @@ from os import getenv
 
 import gspread
 from dotenv import load_dotenv
-from googleapiclient.errors import HttpError
 
 from .utils.logger import logger
 from .utils.webdriver import WebDriver, WebDriverUtils
@@ -34,9 +33,12 @@ def main() -> None:
             scrapper_acoes(gc=gc, conn=conn, driver=driver, spreadsheet_id=SPREADSHEET_ID)
             scrapper_fiis(gc=gc, conn=conn, driver=driver, spreadsheet_id=SPREADSHEET_ID)
 
-    except HttpError as err:
-        logger.error(err)
+    except Exception as err:
+        logger.error(err, exc_info=True)
 
 
 def log_query(sql: str) -> None:
     logger.debug(sql)
+
+
+main()
