@@ -1,4 +1,5 @@
 from sqlite3 import Connection
+from typing import cast
 
 from gspread import Cell, Client
 from gspread.utils import ValueInputOption
@@ -6,45 +7,24 @@ from gspread.utils import ValueInputOption
 from dados_financeiros.utils.progresso_processo import ProgressoProcessos
 
 from ..config.config import Config
-from ..models.fii import FiiModel
-from ..repositories.fii import FiiRepository
-from ..services.fii import FiiService
+from ..fii.application.salvar_dados_fiis_use_case import SalvarFiiUseCase
+from ..fii.domain.value_objects import Fii
+from ..fii.infrastructure.fii_investidor10_gateway import FiiInvestidor10Gateway
+from ..fii.infrastructure.fii_repository import FiiRepository
 from ..sheet.fiis_cells import FiisCells, FiisCols
-from ..utils.datetime import DatetimeUtils
 from ..utils.logger import logger
 from ..utils.webdriver import WebDriver
 
 
-def scrapper_fiis(gc: Client, spreadsheet_id: str, driver: WebDriver, conn: Connection) -> None:
+def scrapper_fiis(gc: Client, spreadsheet_id: str, driver: WebDriver, conn: Connection) -> None:  # noqa: C901
     sheet = gc.open_by_key(spreadsheet_id).get_worksheet_by_id(Config.id_worksheet_fiis_base)
-    tickers_existentes = sheet.col_values(1)
+    tickers_existentes = cast(list[str], sheet.col_values(1))
 
-    fii_service = FiiService(driver, logger=logger)
     fii_repository = FiiRepository(conn, logger=logger)
+    pagina_fii_gateway = FiiInvestidor10Gateway(driver, logger)
+    salvar_fii_use_case = SalvarFiiUseCase(logger, pagina_fii_gateway, fii_repository)
 
-    hoje = DatetimeUtils.hoje()
-    fiis: list[FiiModel] = []
-
-    tickers = fii_repository.verificar_se_existem_tickers(tickers_existentes[1:], hoje)
-
-    processo_scrape_fiis = ProgressoProcessos(
-        total_processos=len(tickers),
-        descricao_tipo_processo="Scrape de FIIs",
-    )
-
-    for i, (ticker, fii) in enumerate(tickers):
-        processo_scrape_fiis.atualizar_progresso(nome_processo=str(ticker), indice_processo=i + 1)
-        if fii is not None:
-            logger.info(f"FII {ticker} já existe no banco de dados para a data {hoje}")
-            fiis.append(fii)
-        else:
-            fii = fii_service.scrape(ticker=str(ticker))
-            if fii is not None:
-                fii = fii_repository.inserir(fii)
-                fiis.append(fii)
-                logger.info(f"FII {ticker} inserido no banco de dados.")
-            else:
-                logger.warning(f"FII {ticker} não encontrado.")
+    fiis: list[Fii] = salvar_fii_use_case.executar(tickers_existentes[1:])
 
     processo_atualizacao_planilhas_fiis = ProgressoProcessos(
         total_processos=len(fiis),

@@ -23,9 +23,9 @@ def main() -> None:
         conn = sqlite3.connect("acoes.db")
         conn.set_trace_callback(log_query)
 
-        with driver, conn:
-            scrapper_acoes(gc=gc, conn=conn, driver=driver, spreadsheet_id=SPREADSHEET_ID)
-            # scrapper_fiis(gc=gc, conn=conn, driver=driver, spreadsheet_id=SPREADSHEET_ID)
+        with conn:
+            # scrapper_acoes(gc=gc, conn=conn, driver=driver, spreadsheet_id=SPREADSHEET_ID)
+            scrapper_fiis(gc=gc, conn=conn, driver=driver, spreadsheet_id=SPREADSHEET_ID)
 
     except Exception as err:
         logger.error(err, exc_info=True)

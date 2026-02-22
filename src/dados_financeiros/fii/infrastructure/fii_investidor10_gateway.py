@@ -1,3 +1,5 @@
+from logging import Logger
+
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 
@@ -9,16 +11,20 @@ from ..domain.interfaces import IFiiInvestidor10Gateway
 
 
 class FiiInvestidor10Gateway(IFiiInvestidor10Gateway):
-    def __init__(self, driver: WebDriver) -> None:
+    def __init__(self, driver: WebDriver, logger: Logger) -> None:
         self._driver = driver
+        self._logger = logger
 
-    def acessar(self, ticker: str) -> None:
+    def _acessar(self, ticker: str) -> None:
+        self._logger.info(f"Acessando página (https://investidor10.com.br/fiis/{ticker})")
         self._driver.get(f"https://investidor10.com.br/fiis/{ticker}")
 
     def fechar(self) -> None:
         self._driver.close()
 
     def obter_dados(self, ticker: str) -> Fii:
+        self._acessar(ticker)
+
         cotacao = self.obter_cotacao()
         pvp = self.obter_pvp()
         segmento = self.obter_segmento()
@@ -26,10 +32,10 @@ class FiiInvestidor10Gateway(IFiiInvestidor10Gateway):
         quantidade_cotas_emitidas = self.obter_quantidade_cotas_emitidas()
         valor_patrimonial_por_cota = self.obter_valor_patrimonial_por_cota()
 
-        dy_1_mes, dividendo_1_mes = self.obter_dividend_yield_1_mes()
-        dy_3_meses, dividendo_3_meses = self.obter_dividend_yield_3_meses()
-        dy_6_meses, dividendo_6_meses = self.obter_dividend_yield_6_meses()
-        dy_12_meses, dividendo_12_meses = self.obter_dividend_yield_12_meses()
+        dividend_yield_1_mes, dividendo_1_mes = self.obter_dividend_yield_1_mes()
+        dividend_yield_3_meses, dividendo_3_meses = self.obter_dividend_yield_3_meses()
+        dividend_yield_6_meses, dividendo_6_meses = self.obter_dividend_yield_6_meses()
+        dividend_yield_12_meses, dividendo_12_meses = self.obter_dividend_yield_12_meses()
 
         return Fii(
             cotacao=cotacao,
@@ -39,14 +45,14 @@ class FiiInvestidor10Gateway(IFiiInvestidor10Gateway):
             tipo_de_fundo=tipo_de_fundo,
             quantidade_cotas_emitidas=quantidade_cotas_emitidas,
             valor_patrimonial_por_cota=valor_patrimonial_por_cota,
-            div_1_mes=dy_1_mes,
-            div_3_meses=dy_3_meses,
-            div_6_meses=dy_6_meses,
-            div_12_meses=dy_12_meses,
-            dy_1_mes=dividendo_1_mes,
-            dy_3_meses=dividendo_3_meses,
-            dy_6_meses=dividendo_6_meses,
-            dy_12_meses=dividendo_12_meses,
+            dividendo_1_mes=dividendo_1_mes,
+            dividendo_3_meses=dividendo_3_meses,
+            dividendo_6_meses=dividendo_6_meses,
+            dividendo_12_meses=dividendo_12_meses,
+            dividend_yield_1_mes=dividend_yield_1_mes,
+            dividend_yield_3_meses=dividend_yield_3_meses,
+            dividend_yield_6_meses=dividend_yield_6_meses,
+            dividend_yield_12_meses=dividend_yield_12_meses,
         )
 
     def obter_cotacao(self) -> str:
@@ -120,10 +126,7 @@ class FiiInvestidor10Gateway(IFiiInvestidor10Gateway):
         return self.__obter_valor_de_informacoes_da_empresa("VAL. PATRIMONIAL P/ COTA")
 
     def __scrape_informacoes_sobre_empresa(self) -> list[WebElement]:
-        if not self.__informacoes_sobre_empresa:
-            self.__informacoes_sobre_empresa = self._driver.find_elements(By.CSS_SELECTOR, "#table-indicators > div")
-
-        return self.__informacoes_sobre_empresa
+        return self._driver.find_elements(By.CSS_SELECTOR, "#table-indicators > div")
 
     def __obter_valor_de_informacoes_da_empresa(self, tipo_informacao: str) -> str:
         informacoes_sobre_empresa = self.__scrape_informacoes_sobre_empresa()
