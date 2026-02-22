@@ -1,25 +1,19 @@
 from datetime import timedelta
 from sqlite3 import Connection
+from typing import cast
 
 from gspread import Cell, Client
 from gspread.utils import ValueInputOption
 
-from dados_financeiros.utils.progresso_processo import ProgressoProcessos
-
+from ..acao.application.salvar_dados_acoes_use_case import SalvarAcaoUseCase
+from ..acao.infrastructure.acao_investidor10_gateway import AcaoInvestidor10Gateway
+from ..acao.infrastructure.acao_repository import AcaoRepository
 from ..config.config import Config
-from ..errors import SemHistoricoDeDividendosError
-from ..models.acao import AcaoModel
-from ..models.dividendo import DividendoAnualModel
-from ..repositories.acao import AcaoRepository
-from ..repositories.dividendo_anual import DividendoAnualRepository
-from ..repositories.dividendo_historico import DividendoHistoricoRepository
-from ..services.acao import AcaoService
-from ..services.dividendo_anual import DividendoAnualService
-from ..services.dividendo_historico import DividendoHistoricoService
 from ..sheet.acao_cells import AcaoCells
 from ..utils.datetime import DatetimeUtils
 from ..utils.formatters import to_brl
 from ..utils.logger import logger
+from ..utils.progresso_processo import ProgressoProcessos
 from ..utils.webdriver import WebDriver
 
 
@@ -30,87 +24,14 @@ def scrapper_acoes(
     conn: Connection,
 ) -> None:
     sheet = gc.open_by_key(spreadsheet_id).get_worksheet_by_id(Config.id_worksheet_acoes_teto_bazin)
-    tickers_existentes = sheet.col_values(1)
+    tickers_existentes = cast(list[str], sheet.col_values(1))
 
-    acao_service = AcaoService(driver, logger)
-    dividendo_anual_service = DividendoAnualService(driver)
-    dividendo_historico_service = DividendoHistoricoService(driver)
-    acao_repository = AcaoRepository(conn)
-    dividendo_anual_repository = DividendoAnualRepository(conn)
-    dividendo_historico_repository = DividendoHistoricoRepository(conn)
+    acao_repository = AcaoRepository(conn, logger)
+    pagina_acao_gateway = AcaoInvestidor10Gateway(driver, logger)
 
-    tickers = acao_repository.verificar_se_existem_tickers(tickers_existentes[2:], DatetimeUtils.hoje())
+    salvar_acao_use_case = SalvarAcaoUseCase(logger, pagina_acao_gateway, acao_repository)
 
-    acoes: list[AcaoModel] = []
-    dividendos_de_acao: dict[str, list[DividendoAnualModel]] = {}
-    medias_dividendos_meses: dict[str, float] = {}
-    hoje = DatetimeUtils.hoje()
-    um_ano_atras = DatetimeUtils.hoje_datetime() - timedelta(days=365)
-
-    processo_scrape_acoes = ProgressoProcessos(
-        total_processos=len(tickers),
-        descricao_tipo_processo="Scrape de Ações",
-    )
-    for i, (ticker, acao) in enumerate(tickers):
-        processo_scrape_acoes.atualizar_progresso(nome_processo=str(ticker), indice_processo=i + 1)
-        if acao is not None:
-            logger.info(f"Ação {ticker} já existe no banco de dados para a data {hoje}.")
-            acoes.append(acao)
-        else:
-            try:
-                acao = acao_service.scrape(ticker=str(ticker))
-                if acao is not None:
-                    acao = acao_repository.inserir(acao)
-                    acoes.append(acao)
-                    logger.info(f"Ação {ticker} inserida no banco de dados.")
-                else:
-                    logger.warning(f"Ação {ticker} não encontrada.")
-            except Exception as e:
-                logger.error(f"Erro ao fazer scrape da ação {ticker}: {e}")
-                continue
-
-        dividendos_anuais: list[DividendoAnualModel] | None = dividendo_anual_repository.obter_por_ticker(ticker)
-
-        quantidade_dividendos_ultimos_12_meses = 0
-        total_dividendos_ultimos_12_meses = 0
-
-        dividendos_historicos = dividendo_historico_service.scrape(ticker=str(ticker))
-        dividendos_historicos = dividendo_historico_repository.inserir(dividendos_historicos)
-        for dividendo_historico in dividendos_historicos:
-            if um_ano_atras <= dividendo_historico.data_anuncio <= DatetimeUtils.hoje_datetime():
-                quantidade_dividendos_ultimos_12_meses += 1
-                total_dividendos_ultimos_12_meses += dividendo_historico.valor
-
-        media_dividendos_ultimos_12_meses = (
-            round(
-                total_dividendos_ultimos_12_meses / quantidade_dividendos_ultimos_12_meses,
-                2,
-            )
-            if quantidade_dividendos_ultimos_12_meses > 0
-            else 0
-        )
-        medias_dividendos_meses[str(ticker)] = media_dividendos_ultimos_12_meses
-
-        if dividendos_anuais is None:
-            dividendos_anuais = []
-            try:
-                for dividendo_scrape in dividendo_anual_service.scrape(ticker=str(ticker)):
-                    if dividendo_scrape is not None:
-                        dividendo_anual_repository.inserir(dividendo_scrape)
-                        dividendos_anuais.append(dividendo_scrape)
-                        logger.info(f"Dividendo {ticker} inserido no banco de dados.")
-
-                    dividendos_anuais = dividendo_anual_repository.obter_por_ticker(ticker)
-                    if dividendos_anuais is None or len(dividendos_anuais) == 0:
-                        logger.info(f"Dividendo {ticker} não encontrado.")
-                    else:
-                        dividendos_de_acao[ticker] = dividendos_anuais
-            except SemHistoricoDeDividendosError as e:
-                logger.warning(e.mensagem)
-                continue
-        else:
-            dividendos_de_acao[ticker] = dividendos_anuais
-            logger.info(f"[{ticker}] - Dividendo já existe no banco de dados.")
+    acoes = salvar_acao_use_case.executar(tickers_existentes[2:])
 
     cells_to_update: list[Cell] = []
 
@@ -154,7 +75,7 @@ def scrapper_acoes(
         if roe:
             cells_to_update.append(roe)
 
-        dividend_yield = acao_cells.cell_dividend_yield(acao.dividend_yield)
+        dividend_yield = acao_cells.cell_dividend_yield(acao.dy)
         if dividend_yield:
             cells_to_update.append(dividend_yield)
 
@@ -169,19 +90,66 @@ def scrapper_acoes(
         segmento = acao_cells.cell_segmento_do_certo(acao.segmento)
         if segmento:
             cells_to_update.append(segmento)
+        agora = DatetimeUtils.hoje_datetime()
+        um_ano_atras = agora - timedelta(days=365)
+        # Faz o cálculo de média de dividendos do último 1 ano
+        dividendos_12_meses = list(
+            filter(
+                lambda d: um_ano_atras <= d.data_anuncio <= agora,
+                acao.dividendos,
+            )
+        )
+        soma_dividendos_12_meses = 0
+        for div in dividendos_12_meses:
+            soma_dividendos_12_meses += div.valor
 
-        dividendo_medio_12_meses = medias_dividendos_meses.get(acao.ticker, 0)
-        dividendo_medio_12_meses_value = to_brl(dividendo_medio_12_meses)
-
-        dividendo_medio_12_meses_cell = acao_cells.cell_media_dividendos_12_meses(dividendo_medio_12_meses_value)
+        dividendo_medio_12_meses = soma_dividendos_12_meses / (len(dividendos_12_meses) or 1)
+        dividendo_medio_12_meses_cell = acao_cells.cell_media_dividendos_12_meses(to_brl(dividendo_medio_12_meses))
         if dividendo_medio_12_meses_cell:
             cells_to_update.append(dividendo_medio_12_meses_cell)
 
-        dividendos_anuais = dividendos_de_acao.get(acao.ticker, [])
-        dividendos_values = [to_brl(div.valor) for div in dividendos_anuais]
-        dividendos_cells = acao_cells.cells_dividendos(dividendos_values)
-        if len(dividendos_cells) > 0:
-            cells_to_update.extend(dividendos_cells)
+        # Agrupa total de dividendos por ano
+        soma_dividendos_por_ano: dict[str, float] = {
+            "2026": 0,
+            "2025": 0,
+            "2024": 0,
+            "2023": 0,
+            "2022": 0,
+        }
+
+        for div in acao.dividendos:
+            key = str(div.data_anuncio.year)
+
+            if key not in soma_dividendos_por_ano:
+                soma_dividendos_por_ano[key] = 0
+
+            soma_dividendos_por_ano[key] += div.valor
+
+        # for k, v in soma_dividendos_por_ano.items():
+        #     print(f"{acao.ticker} | {k} = {v} {to_brl(v)}")
+        #     print()
+        # input()
+
+        cell_2026 = acao_cells.dividendo_ano_2026(to_brl(soma_dividendos_por_ano["2026"] or 0))
+        if cell_2026:
+            cells_to_update.append(cell_2026)
+        cell_2025 = acao_cells.dividendo_ano_2025(to_brl(soma_dividendos_por_ano["2025"] or 0))
+        if cell_2025:
+            cells_to_update.append(cell_2025)
+        cell_2024 = acao_cells.dividendo_ano_2024(to_brl(soma_dividendos_por_ano["2024"] or 0))
+        if cell_2024:
+            cells_to_update.append(cell_2024)
+        cell_2023 = acao_cells.dividendo_ano_2023(to_brl(soma_dividendos_por_ano["2023"] or 0))
+        if cell_2023:
+            cells_to_update.append(cell_2023)
+        cell_2022 = acao_cells.dividendo_ano_2022(to_brl(soma_dividendos_por_ano["2022"] or 0))
+        if cell_2022:
+            cells_to_update.append(cell_2022)
+
+        # dividendos_values = [to_brl(float(div.valor)) for div in acao.dividendos]
+        # dividendos_cells = acao_cells.cells_dividendos(dividendos_values)
+        # if len(dividendos_cells) > 0:
+        #     cells_to_update.extend(dividendos_cells)
 
     logger.info("Atualizando planilha")
     sheet.update_cells(cells_to_update, value_input_option=ValueInputOption.user_entered)

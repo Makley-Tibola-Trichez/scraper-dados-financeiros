@@ -1,11 +1,11 @@
-from datetime import datetime, timezone
+from datetime import datetime
 
 
 class DatetimeUtils:
     @staticmethod
     def hoje() -> str:
-        return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        return datetime.now().strftime("%Y-%m-%d")
 
     @staticmethod
     def hoje_datetime() -> datetime:
-        return datetime.now(timezone.utc)
+        return datetime.now()
