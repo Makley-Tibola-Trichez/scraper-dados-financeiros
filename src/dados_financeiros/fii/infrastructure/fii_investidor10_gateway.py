@@ -5,6 +5,7 @@ from selenium.webdriver.remote.webelement import WebElement
 
 from dados_financeiros.errors import ElementoNaoEncontradoError
 from dados_financeiros.fii.domain.value_objects import Fii
+from dados_financeiros.utils.formatters import from_brl
 from dados_financeiros.utils.webdriver import WebDriver
 
 from ..domain.interfaces import IFiiInvestidor10Gateway
@@ -56,9 +57,11 @@ class FiiInvestidor10Gateway(IFiiInvestidor10Gateway):
         )
 
     def obter_cotacao(self) -> str:
-        return self._driver.find_element(
-            By.CSS_SELECTOR, "#cards-ticker > div._card.cotacao > div._card-body > div > span"
-        ).text.strip()
+        return from_brl(
+            self._driver.find_element(
+                By.CSS_SELECTOR, "#cards-ticker > div._card.cotacao > div._card-body > div > span"
+            ).text
+        )
 
     def obter_dividend_yield_1_mes(self) -> tuple[str, str]:
         dividend_yield = self._driver.find_element(

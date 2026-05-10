@@ -19,7 +19,7 @@ class SalvarAcaoUseCase:
             if acao is not None:
                 self._logger.info(f"{ticker} já existe")
 
-                acao.dividendos = self._gateway.obter_dados(ticker).dividendos
+                # acao.dividendos = self._gateway.obter_dados(ticker).dividendos
                 acoes.append(acao)
             else:
                 try:

@@ -10,6 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from dados_financeiros.acao.domain.interfaces import IAcaoInvestidor10Gateway
 from dados_financeiros.acao.domain.value_objects import Acao, Dividendo
 from dados_financeiros.errors import ElementoNaoEncontradoError
+from dados_financeiros.utils.formatters import from_brl
 from dados_financeiros.utils.webdriver import WebDriver
 
 
@@ -97,10 +98,12 @@ class AcaoInvestidor10Gateway(IAcaoInvestidor10Gateway):
         )
 
     def obter_cotacao(self) -> str:
-        return self._driver.find_element(
-            By.CSS_SELECTOR,
-            "#cards-ticker > div._card.cotacao > div._card-body > div > span",
-        ).text.strip()
+        return from_brl(
+            self._driver.find_element(
+                By.CSS_SELECTOR,
+                "#cards-ticker > div._card.cotacao > div._card-body > div > span",
+            ).text
+        )
 
     def obter_pl(self) -> str:
         return self._driver.find_element(

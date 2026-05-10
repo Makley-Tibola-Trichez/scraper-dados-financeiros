@@ -24,7 +24,7 @@ def main() -> None:
         conn.set_trace_callback(log_query)
 
         with conn:
-            # scrapper_acoes(gc=gc, conn=conn, driver=driver, spreadsheet_id=SPREADSHEET_ID)
+            scrapper_acoes(gc=gc, conn=conn, driver=driver, spreadsheet_id=SPREADSHEET_ID)
             scrapper_fiis(gc=gc, conn=conn, driver=driver, spreadsheet_id=SPREADSHEET_ID)
 
     except Exception as err:

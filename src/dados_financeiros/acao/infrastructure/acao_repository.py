@@ -1,5 +1,5 @@
-from datetime import datetime
 import json
+from datetime import datetime
 from logging import Logger
 from sqlite3 import Connection
 from typing import Any
@@ -66,11 +66,47 @@ class AcaoRepository(IAcaoRepository):
         acoes: list[tuple[str, Acao | None]] = []
 
         results = [self._sql_to_acao(row) for row in cursor.fetchall()]
+
+        cursor.execute(
+            """
+            SELECT
+                *
+            FROM
+                acao_historico_dividendos
+            WHERE
+                criado_em = ?
+        """,
+            (datetime.now().strftime("%Y-%m-%d"),),
+        )
+
+        dividendos = cursor.fetchall()
         cursor.close()
+
+        # Agrupa dividendos
+
+        kv_dividendos: dict[str, list[Dividendo]] = {}
+
+        for dividendo in dividendos:
+            div_ticker = dividendo[0]
+            if div_ticker not in kv_dividendos.keys():
+                kv_dividendos[div_ticker] = []
+
+            kv_dividendos[div_ticker].append(
+                Dividendo(
+                    valor=dividendo[1],
+                    data_anuncio=dividendo[2],
+                    data_pagamento=dividendo[3],
+                    tipo=dividendo[4],
+                )
+            )
 
         for ticker in tickers:
             if any(acao.ticker == ticker for acao in results):
                 acao = next(acao for acao in results if acao.ticker == ticker)
+
+                if acao.ticker in kv_dividendos.keys():
+                    acao.dividendos = kv_dividendos[acao.ticker]
+
                 acoes.append((ticker, acao))
             else:
                 acoes.append((ticker, None))
@@ -127,6 +163,7 @@ class AcaoRepository(IAcaoRepository):
                 acao.dl_ebit,
             ),
         )
+
         novo_registro = cursor.fetchone()
         self.conn.commit()
         dividendos: list[tuple] = []
@@ -134,31 +171,24 @@ class AcaoRepository(IAcaoRepository):
         for div in acao.dividendos:
             dividendos.append((acao.ticker, div.valor, div.data_anuncio, div.data_pagamento, div.tipo))
 
-        # print(dividendos)
+        cursor = cursor.executemany(
+            """
+            INSERT INTO acao_historico_dividendos (
+                ticker,
+                valor,
+                data_anuncio,
+                data_pagamento,
+                tipo
+            )
+            VALUES (?, ?, ?, ?, ?)
+            RETURNING *
+        """,
+            dividendos,
+        )
 
-        # cursor = cursor.executemany(
-        #     """
-        #     INSERT INTO acao_historico_dividendos (
-        #         ticker,
-        #         valor,
-        #         data_anuncio,
-        #         data_pagamento,
-        #         tipo
-        #     )
-        #     VALUES (?, ?, ?, ?, ?)
-        #     RETURNING *
-        # """,
-        #     dividendos,
-        # )
-
-        # dividendos = cursor.fetchall()
-        # self.conn.commit()
+        dividendos = cursor.fetchall()
+        self.conn.commit()
         cursor.close()
-
-        # print(dividendos)
-
-        # input("dividendos")
-
         acao = self._sql_to_acao((*novo_registro,))
 
         return acao
