@@ -5,7 +5,7 @@ class Fii(BaseModel):
     ticker: str = Field(...)
     tipo_de_fundo: str = Field(...)
     segmento: str = Field(...)
-    cotacao: str = Field(...)
+    cotacao: float = Field(...)
     pvp: str = Field(...)
     quantidade_cotas_emitidas: str = Field(...)
     valor_patrimonial_por_cota: str = Field(...)

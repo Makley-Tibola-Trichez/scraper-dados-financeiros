@@ -2,16 +2,12 @@ from datetime import datetime
 from enum import StrEnum
 from logging import Logger
 
-from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+from playwright.sync_api import Locator, Page
 
 from dados_financeiros.acao.domain.interfaces import IAcaoInvestidor10Gateway
 from dados_financeiros.acao.domain.value_objects import Acao, Dividendo
 from dados_financeiros.errors import ElementoNaoEncontradoError
 from dados_financeiros.utils.formatters import from_brl
-from dados_financeiros.utils.webdriver import WebDriver
 
 
 class TipoIndicador(StrEnum):
@@ -30,8 +26,8 @@ class TipoIndicador(StrEnum):
 
 
 class AcaoInvestidor10Gateway(IAcaoInvestidor10Gateway):
-    def __init__(self, driver: WebDriver, logger: Logger) -> None:
-        self._driver = driver
+    def __init__(self, driver: Page, logger: Logger) -> None:
+        self._page = driver
         self._logger = logger
         # self._indicadores: list[WebElement] | None = None
         # self._informacoes_sobre_empresa: list[WebElement] | None = None
@@ -39,15 +35,15 @@ class AcaoInvestidor10Gateway(IAcaoInvestidor10Gateway):
     def _acessar(self, ticker: str) -> None:
         url = f"https://investidor10.com.br/acoes/{ticker}"
         self._logger.info(f"Acessando página ({url})")
-        self._driver.get(url)
+        self._page.goto(url)
 
     def _acessar_fundamentus_proventos(self, ticker: str) -> None:
         url = f"https://www.fundamentus.com.br/proventos.php?papel={ticker}&tipo=2"
         self._logger.info(f"Acessando página ({url})")
-        self._driver.get(url)
+        self._page.goto(url, timeout=60000)
 
     def fechar(self) -> None:
-        self._driver.close()
+        self._page.close()
 
     def obter_dados(self, ticker: str) -> Acao:
         self._acessar(ticker)
@@ -99,21 +95,19 @@ class AcaoInvestidor10Gateway(IAcaoInvestidor10Gateway):
 
     def obter_cotacao(self) -> str:
         return from_brl(
-            self._driver.find_element(
-                By.CSS_SELECTOR,
+            self._page.locator(
                 "#cards-ticker > div._card.cotacao > div._card-body > div > span",
-            ).text
+            )
+            .inner_text()
+            .strip()
+            or ""
         )
 
     def obter_pl(self) -> str:
-        return self._driver.find_element(
-            By.CSS_SELECTOR, "#cards-ticker > div._card.val > div._card-body > span"
-        ).text.strip()
+        return self._page.locator("#cards-ticker > div._card.val > div._card-body > span").inner_text().strip()
 
     def obter_pvp(self) -> str:
-        return self._driver.find_element(
-            By.CSS_SELECTOR, "#cards-ticker > div._card.vp > div._card-body > span"
-        ).text.strip()
+        return self._page.locator("#cards-ticker > div._card.vp > div._card-body > span").inner_text().strip()
 
     def obter_vpa(self) -> str:
         indicador = self._obter_indicador(TipoIndicador.VPA)
@@ -151,9 +145,7 @@ class AcaoInvestidor10Gateway(IAcaoInvestidor10Gateway):
         return indicador
 
     def obter_dy(self) -> str:
-        return self._driver.find_element(
-            By.CSS_SELECTOR, "#cards-ticker > div._card.dy > div._card-body > span"
-        ).text.strip()
+        return self._page.locator("#cards-ticker > div._card.dy > div._card-body > span").inner_text().strip()
 
     def obter_payout(self) -> str:
         indicador = self._obter_indicador(TipoIndicador.PAYOUT)
@@ -224,34 +216,32 @@ class AcaoInvestidor10Gateway(IAcaoInvestidor10Gateway):
         try:
             indicadores = self.__scrape_indicadores()
             for indicador in indicadores:
-                if (
-                    str(indicador.find_element(By.CSS_SELECTOR, "& > span").text).strip().lower()
-                    == tipo_indicador.value
-                ):
-                    return indicador.find_element(By.CSS_SELECTOR, "div.value > span").text.strip()
+                texto_indicador = indicador.locator("span:has(~ div.value)").text_content()
+                if str(texto_indicador).strip().lower() == tipo_indicador.value:
+                    return indicador.locator("span ~ div.value").text_content()
 
             return None
         except Exception as _:
             self._logger.warning(f"Ocorreu algum problema ao buscar o '{tipo_indicador.name}'")
             return None
 
-    def __scrape_indicadores(self) -> list[WebElement]:
-        return WebDriverWait(self._driver, 10).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "#table-indicators > div"))
-        )
+    def __scrape_indicadores(self) -> list[Locator]:
+        indicadores = self._page.locator("#table-indicators > div")
 
-    def __scrape_informacoes_sobre_empresa(self) -> list[WebElement]:
-        return WebDriverWait(self._driver, 10).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "#table-indicators-company > div"))
-        )
+        return [indicadores.nth(i) for i in range(indicadores.count())]
+
+    def __scrape_informacoes_sobre_empresa(self) -> list[Locator]:
+        indicadores = self._page.locator("#table-indicators-company > div")
+
+        return [indicadores.nth(i) for i in range(indicadores.count())]
 
     def obter_setor(self) -> str:
         informacoes_sobre_empresa = self.__scrape_informacoes_sobre_empresa()
         informacoes_sobre_empresa.reverse()
 
         for elemento in informacoes_sobre_empresa:
-            if str(elemento.find_element(By.CSS_SELECTOR, "span.title").text).strip().lower() == "setor":
-                return elemento.find_element(By.CSS_SELECTOR, "span.value").text.strip()
+            if str(elemento.locator("span.title").inner_text()).strip().lower() == "setor":
+                return elemento.locator("span.value").inner_text().strip()
 
         raise ElementoNaoEncontradoError(seletor="SETOR")
 
@@ -260,20 +250,23 @@ class AcaoInvestidor10Gateway(IAcaoInvestidor10Gateway):
         informacoes_sobre_empresa.reverse()
 
         for elemento in informacoes_sobre_empresa:
-            if str(elemento.find_element(By.CSS_SELECTOR, "span.title").text).strip().lower() == "segmento":
-                return elemento.find_element(By.CSS_SELECTOR, "span.value").text.strip()
+            if str(elemento.locator("span.title").inner_text()).strip().lower() == "segmento":
+                return elemento.locator("span.value").inner_text().strip()
 
         raise ElementoNaoEncontradoError(seletor="SEGMENTO DO SETOR")
 
     def obter_dividendos(self, ticker: str) -> list[Dividendo]:
         self._acessar_fundamentus_proventos(ticker)
 
-        linhas = self._driver.find_elements(By.CSS_SELECTOR, "#resultado > tbody > tr")
+        linhas = self._page.locator("#resultado > tbody > tr")
 
         dividendos_historicos: list[Dividendo] = []
-        for linha in linhas:
-            colunas = linha.find_elements(By.TAG_NAME, "td")
-            data_anuncio = datetime.strptime(colunas[0].text, "%d/%m/%Y")
+        for i in range(linhas.count()):
+            linha = linhas.nth(i)
+            colunas = linha.locator("td")
+            colunas = [colunas.nth(i) for i in range(colunas.count())]
+
+            data_anuncio = datetime.strptime(colunas[0].inner_text(), "%d/%m/%Y")
             ano_limite = datetime(2020, 1, 1)
 
             if data_anuncio < ano_limite:
@@ -282,12 +275,12 @@ class AcaoInvestidor10Gateway(IAcaoInvestidor10Gateway):
             data_pagamento = None
 
             try:
-                data_pagamento = datetime.strptime(colunas[3].text, "%d/%m/%Y")
+                data_pagamento = datetime.strptime(colunas[3].inner_text(), "%d/%m/%Y")
             except Exception as e:
                 self._logger.warning(e)
 
-            valor = float(colunas[1].text.replace("R$", "").replace(",", "."))
-            tipo = colunas[2].text
+            valor = float(colunas[1].inner_text().replace("R$", "").replace(",", "."))
+            tipo = colunas[2].inner_text()
 
             dividendos_historicos.append(
                 Dividendo(

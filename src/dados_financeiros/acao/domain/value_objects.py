@@ -20,7 +20,7 @@ class Dividendo(BaseModel):
 
 class Acao(BaseModel):
     ticker: str = Field(..., min_length=1, max_length=10, description="Identificador da ação")
-    cotacao: str = Field(..., title="Cotação")
+    cotacao: float = Field(..., title="Cotação")
     pl: str = Field(
         ...,
         title="P/L - Preço sobre o lucro",

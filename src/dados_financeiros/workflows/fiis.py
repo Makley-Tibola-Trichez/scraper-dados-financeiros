@@ -3,7 +3,9 @@ from typing import cast
 
 from gspread import Cell, Client
 from gspread.utils import ValueInputOption
+from playwright.sync_api import Page
 
+from dados_financeiros.utils.formatters import to_br_decimal
 from dados_financeiros.utils.progresso_processo import ProgressoProcessos
 
 from ..config.config import Config
@@ -13,15 +15,14 @@ from ..fii.infrastructure.fii_investidor10_gateway import FiiInvestidor10Gateway
 from ..fii.infrastructure.fii_repository import FiiRepository
 from ..sheet.fiis_cells import FiisCells, FiisCols
 from ..utils.logger import logger
-from ..utils.webdriver import WebDriver
 
 
-def scrapper_fiis(gc: Client, spreadsheet_id: str, driver: WebDriver, conn: Connection) -> None:  # noqa: C901
+def scrapper_fiis(gc: Client, spreadsheet_id: str, page: Page, conn: Connection) -> None:  # noqa: C901
     sheet = gc.open_by_key(spreadsheet_id).get_worksheet_by_id(Config.id_worksheet_fiis_base)
     tickers_existentes = cast(list[str], sheet.col_values(1))
 
     fii_repository = FiiRepository(conn, logger=logger)
-    pagina_fii_gateway = FiiInvestidor10Gateway(driver, logger)
+    pagina_fii_gateway = FiiInvestidor10Gateway(page, logger)
     salvar_fii_use_case = SalvarFiiUseCase(logger, pagina_fii_gateway, fii_repository)
 
     fiis: list[Fii] = salvar_fii_use_case.executar(tickers_existentes[1:])
@@ -48,7 +49,7 @@ def scrapper_fiis(gc: Client, spreadsheet_id: str, driver: WebDriver, conn: Conn
         if segmento:
             cells_to_update.append(segmento)
 
-        cotacao = fii_cells.make_cell(FiisCols.COTACAO, fii.cotacao)
+        cotacao = fii_cells.make_cell(FiisCols.COTACAO, to_br_decimal(fii.cotacao))
         if cotacao:
             cells_to_update.append(cotacao)
 

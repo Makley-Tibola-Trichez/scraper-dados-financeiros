@@ -1,27 +1,25 @@
 from logging import Logger
 
-from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webelement import WebElement
+from playwright.sync_api import Locator, Page
 
 from dados_financeiros.errors import ElementoNaoEncontradoError
 from dados_financeiros.fii.domain.value_objects import Fii
 from dados_financeiros.utils.formatters import from_brl
-from dados_financeiros.utils.webdriver import WebDriver
 
 from ..domain.interfaces import IFiiInvestidor10Gateway
 
 
 class FiiInvestidor10Gateway(IFiiInvestidor10Gateway):
-    def __init__(self, driver: WebDriver, logger: Logger) -> None:
-        self._driver = driver
+    def __init__(self, page: Page, logger: Logger) -> None:
+        self._page = page
         self._logger = logger
 
     def _acessar(self, ticker: str) -> None:
         self._logger.info(f"Acessando página (https://investidor10.com.br/fiis/{ticker})")
-        self._driver.get(f"https://investidor10.com.br/fiis/{ticker}")
+        self._page.goto(f"https://investidor10.com.br/fiis/{ticker}")
 
     def fechar(self) -> None:
-        self._driver.close()
+        self._page.close()
 
     def obter_dados(self, ticker: str) -> Fii:
         self._acessar(ticker)
@@ -57,57 +55,90 @@ class FiiInvestidor10Gateway(IFiiInvestidor10Gateway):
         )
 
     def obter_cotacao(self) -> str:
-        return from_brl(
-            self._driver.find_element(
-                By.CSS_SELECTOR, "#cards-ticker > div._card.cotacao > div._card-body > div > span"
-            ).text
-        )
+        seletor = "#cards-ticker > div._card.cotacao > div._card-body > div > span"
+        conteudo = self._page.locator(seletor).text_content()
+        if not conteudo:
+            raise ElementoNaoEncontradoError(seletor=seletor)
+        conteudo = conteudo.strip()
+        return from_brl(conteudo)
 
     def obter_dividend_yield_1_mes(self) -> tuple[str, str]:
-        dividend_yield = self._driver.find_element(
-            By.CSS_SELECTOR,
-            "#yield-distribuition > div > div.content--info > div:nth-child(1) > span.content--info--item--value",
-        ).text.strip()
-        dividendo_pago = self._driver.find_element(
-            By.CSS_SELECTOR,
-            "#yield-distribuition > div > div.content--info > div:nth-child(1) > span.content--info--item--value.amount",
-        ).text.strip()
+        seletor_dy = "#yield-distribuition > div > div.content--info > div:nth-child(1) > span.content--info--item--value:not(.amount)"
+        conteudo_dy = self._page.locator(seletor_dy).text_content()
+
+        if not conteudo_dy:
+            raise ElementoNaoEncontradoError(seletor=seletor_dy)
+        dividend_yield = conteudo_dy.strip()
+
+        seletor_d_pago = (
+            "#yield-distribuition > div > div.content--info > div:nth-child(1) > span.content--info--item--value.amount"
+        )
+        conteudo_d_pago = self._page.locator(seletor_d_pago).text_content()
+
+        if not conteudo_d_pago:
+            raise ElementoNaoEncontradoError()
+
+        dividendo_pago = conteudo_d_pago.strip()
 
         return (dividend_yield, dividendo_pago)
 
     def obter_dividend_yield_3_meses(self) -> tuple[str, str]:
-        dividend_yield = self._driver.find_element(
-            By.CSS_SELECTOR,
-            "#yield-distribuition > div > div.content--info > div:nth-child(2) > span.content--info--item--value",
-        ).text.strip()
-        dividendo_pago = self._driver.find_element(
-            By.CSS_SELECTOR,
-            "#yield-distribuition > div > div.content--info > div:nth-child(2) > span.content--info--item--value.amount",
-        ).text.strip()
+        seletor_dy = "#yield-distribuition > div > div.content--info > div:nth-child(2) > span.content--info--item--value:not(.amount)"
+        conteudo_dy = self._page.locator(seletor_dy).text_content()
+
+        if not conteudo_dy:
+            raise ElementoNaoEncontradoError(seletor=seletor_dy)
+        dividend_yield = conteudo_dy.strip()
+
+        seletor_d_pago = (
+            "#yield-distribuition > div > div.content--info > div:nth-child(2) > span.content--info--item--value.amount"
+        )
+        conteudo_d_pago = self._page.locator(seletor_d_pago).text_content()
+
+        if not conteudo_d_pago:
+            raise ElementoNaoEncontradoError(seletor=seletor_d_pago)
+
+        dividendo_pago = conteudo_d_pago.strip()
 
         return (dividend_yield, dividendo_pago)
 
     def obter_dividend_yield_6_meses(self) -> tuple[str, str]:
-        dividend_yield = self._driver.find_element(
-            By.CSS_SELECTOR,
-            "#yield-distribuition > div > div.content--info > div:nth-child(3) > span.content--info--item--value",
-        ).text.strip()
-        dividendo_pago = self._driver.find_element(
-            By.CSS_SELECTOR,
-            "#yield-distribuition > div > div.content--info > div:nth-child(3) > span.content--info--item--value.amount",
-        ).text.strip()
+        seletor_dy = "#yield-distribuition > div > div.content--info > div:nth-child(3) > span.content--info--item--value:not(.amount)"
+        conteudo_dy = self._page.locator(seletor_dy).text_content()
+
+        if not conteudo_dy:
+            raise ElementoNaoEncontradoError(seletor=seletor_dy)
+        dividend_yield = conteudo_dy.strip()
+
+        seletor_d_pago = (
+            "#yield-distribuition > div > div.content--info > div:nth-child(3) > span.content--info--item--value.amount"
+        )
+        conteudo_d_pago = self._page.locator(seletor_d_pago).text_content()
+
+        if not conteudo_d_pago:
+            raise ElementoNaoEncontradoError(seletor=seletor_d_pago)
+
+        dividendo_pago = conteudo_d_pago.strip()
 
         return (dividend_yield, dividendo_pago)
 
     def obter_dividend_yield_12_meses(self) -> tuple[str, str]:
-        dividend_yield = self._driver.find_element(
-            By.CSS_SELECTOR,
-            "#yield-distribuition > div > div.content--info > div:nth-child(4) > span.content--info--item--value",
-        ).text.strip()
-        dividendo_pago = self._driver.find_element(
-            By.CSS_SELECTOR,
-            "#yield-distribuition > div > div.content--info > div:nth-child(4) > span.content--info--item--value.amount",
-        ).text.strip()
+        seletor_dy = "#yield-distribuition > div > div.content--info > div:nth-child(4) > span.content--info--item--value:not(.amount)"
+        conteudo_dy = self._page.locator(seletor_dy).text_content()
+
+        if not conteudo_dy:
+            raise ElementoNaoEncontradoError(seletor=seletor_dy)
+        dividend_yield = conteudo_dy.strip()
+
+        seletor_d_pago = (
+            "#yield-distribuition > div > div.content--info > div:nth-child(4) > span.content--info--item--value.amount"
+        )
+        conteudo_d_pago = self._page.locator(seletor_d_pago).text_content()
+
+        if not conteudo_d_pago:
+            raise ElementoNaoEncontradoError(seletor=seletor_d_pago)
+
+        dividendo_pago = conteudo_d_pago.strip()
 
         return (dividend_yield, dividendo_pago)
 
@@ -118,9 +149,12 @@ class FiiInvestidor10Gateway(IFiiInvestidor10Gateway):
         return self.__obter_valor_de_informacoes_da_empresa("TIPO DE FUNDO")
 
     def obter_pvp(self) -> str:
-        return self._driver.find_element(
-            By.CSS_SELECTOR, "#cards-ticker > div._card.vp > div._card-body > span"
-        ).text.strip()
+        seletor = "#cards-ticker > div._card.vp > div._card-body > span"
+        pvp = self._page.locator(seletor).text_content()
+
+        if not pvp:
+            raise ElementoNaoEncontradoError(seletor=seletor)
+        return pvp.strip()
 
     def obter_quantidade_cotas_emitidas(self) -> str:
         return self.__obter_valor_de_informacoes_da_empresa("COTAS EMITIDAS")
@@ -128,17 +162,17 @@ class FiiInvestidor10Gateway(IFiiInvestidor10Gateway):
     def obter_valor_patrimonial_por_cota(self) -> str:
         return self.__obter_valor_de_informacoes_da_empresa("VAL. PATRIMONIAL P/ COTA")
 
-    def __scrape_informacoes_sobre_empresa(self) -> list[WebElement]:
-        return self._driver.find_elements(By.CSS_SELECTOR, "#table-indicators > div")
+    def __scrape_informacoes_sobre_empresa(self) -> list[Locator]:
+        informacoes = self._page.locator("#table-indicators > div")
+
+        return [informacoes.nth(i) for i in range(informacoes.count())]
 
     def __obter_valor_de_informacoes_da_empresa(self, tipo_informacao: str) -> str:
         informacoes_sobre_empresa = self.__scrape_informacoes_sobre_empresa()
 
         for elemento in informacoes_sobre_empresa:
-            if (
-                str(elemento.find_element(By.CSS_SELECTOR, "div.desc > span").text).strip().lower()
-                == tipo_informacao.lower()
-            ):
-                return elemento.find_element(By.CSS_SELECTOR, "div.desc > div > span").text.strip()
+            if str(elemento.locator("div.desc > span").text_content()).strip().lower() == tipo_informacao.lower():
+                info = elemento.locator("div.desc > div > span").text_content() or ""
+                return info.strip()
 
         raise ElementoNaoEncontradoError(seletor=tipo_informacao.upper())

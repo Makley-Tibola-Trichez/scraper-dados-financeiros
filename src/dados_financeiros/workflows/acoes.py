@@ -4,6 +4,8 @@ from typing import cast
 
 from gspread import Cell, Client
 from gspread.utils import ValueInputOption
+from playwright.sync_api import Page
+from prefect import task
 
 from ..acao.application.salvar_dados_acoes_use_case import SalvarAcaoUseCase
 from ..acao.infrastructure.acao_investidor10_gateway import AcaoInvestidor10Gateway
@@ -11,23 +13,23 @@ from ..acao.infrastructure.acao_repository import AcaoRepository
 from ..config.config import Config
 from ..sheet.acao_cells import AcaoCells
 from ..utils.datetime import DatetimeUtils
-from ..utils.formatters import to_brl
+from ..utils.formatters import to_br_decimal, to_brl
 from ..utils.logger import logger
 from ..utils.progresso_processo import ProgressoProcessos
-from ..utils.webdriver import WebDriver
 
 
+@task(name="Scrapper dados ações")
 def scrapper_acoes(
     gc: Client,
     spreadsheet_id: str,
-    driver: WebDriver,
+    page: Page,
     conn: Connection,
 ) -> None:
     sheet = gc.open_by_key(spreadsheet_id).get_worksheet_by_id(Config.id_worksheet_acoes_teto_bazin)
     tickers_existentes = cast(list[str], sheet.col_values(1))
 
     acao_repository = AcaoRepository(conn, logger)
-    pagina_acao_gateway = AcaoInvestidor10Gateway(driver, logger)
+    pagina_acao_gateway = AcaoInvestidor10Gateway(page, logger)
 
     salvar_acao_use_case = SalvarAcaoUseCase(logger, pagina_acao_gateway, acao_repository)
 
@@ -51,7 +53,7 @@ def scrapper_acoes(
         linha = tickers_existentes.index(acao.ticker) + 1
         acao_cells = AcaoCells(linha)
 
-        cotacao = acao_cells.cell_cotacao(acao.cotacao)
+        cotacao = acao_cells.cell_cotacao(to_br_decimal(acao.cotacao))
         if cotacao:
             cells_to_update.append(cotacao)
 
@@ -104,7 +106,9 @@ def scrapper_acoes(
             soma_dividendos_12_meses += div.valor
 
         dividendo_medio_12_meses = soma_dividendos_12_meses / (len(dividendos_12_meses) or 1)
-        dividendo_medio_12_meses_cell = acao_cells.cell_media_dividendos_12_meses(to_brl(dividendo_medio_12_meses))
+        dividendo_medio_12_meses_cell = acao_cells.cell_media_dividendos_12_meses(
+            to_br_decimal(dividendo_medio_12_meses)
+        )
         if dividendo_medio_12_meses_cell:
             cells_to_update.append(dividendo_medio_12_meses_cell)
 

@@ -70,7 +70,11 @@ class AcaoRepository(IAcaoRepository):
         cursor.execute(
             """
             SELECT
-                *
+                ticker,
+                valor,
+                data_anuncio,
+                data_pagamento,
+                tipo
             FROM
                 acao_historico_dividendos
             WHERE
@@ -171,6 +175,9 @@ class AcaoRepository(IAcaoRepository):
         for div in acao.dividendos:
             dividendos.append((acao.ticker, div.valor, div.data_anuncio, div.data_pagamento, div.tipo))
 
+        cursor = cursor.execute("DELETE FROM acao_historico_dividendos WHERE ticker = ?", (acao.ticker,))
+        cursor.fetchone()
+
         cursor = cursor.executemany(
             """
             INSERT INTO acao_historico_dividendos (
@@ -185,10 +192,10 @@ class AcaoRepository(IAcaoRepository):
         """,
             dividendos,
         )
-
         dividendos = cursor.fetchall()
         self.conn.commit()
         cursor.close()
+
         acao = self._sql_to_acao((*novo_registro,))
 
         return acao
