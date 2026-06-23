@@ -4,7 +4,7 @@ def to_brl(value: float) -> str:
 
 
 def from_brl(v: str) -> str:
-    return v.strip().replace("R$ ", "").replace(",", ".")
+    return v.strip().replace("R$ ", "").replace(".", "").replace(",", ".")
 
 
 def to_br_decimal(v: float) -> str:
