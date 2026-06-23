@@ -37,7 +37,7 @@ class FiiInvestidor10Gateway(IFiiInvestidor10Gateway):
         dividend_yield_12_meses, dividendo_12_meses = self.obter_dividend_yield_12_meses()
 
         return Fii(
-            cotacao=cotacao,
+            cotacao=float(cotacao),
             ticker=ticker,
             pvp=pvp,
             segmento=segmento,
@@ -55,7 +55,7 @@ class FiiInvestidor10Gateway(IFiiInvestidor10Gateway):
         )
 
     def obter_cotacao(self) -> str:
-        seletor = "#cards-ticker > div._card.cotacao > div._card-body > div > span"
+        seletor = "#cards-ticker > div._card.cotacao > div._card-body > div > span.value"
         conteudo = self._page.locator(seletor).text_content()
         if not conteudo:
             raise ElementoNaoEncontradoError(seletor=seletor)

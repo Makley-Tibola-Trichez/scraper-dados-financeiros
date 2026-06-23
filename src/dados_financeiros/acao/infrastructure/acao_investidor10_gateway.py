@@ -72,7 +72,7 @@ class AcaoInvestidor10Gateway(IAcaoInvestidor10Gateway):
 
         return Acao(
             ticker=ticker,
-            cotacao=cotacao,
+            cotacao=float(cotacao),
             pl=pl,
             pvp=pvp,
             vpa=vpa,
@@ -96,7 +96,7 @@ class AcaoInvestidor10Gateway(IAcaoInvestidor10Gateway):
     def obter_cotacao(self) -> str:
         return from_brl(
             self._page.locator(
-                "#cards-ticker > div._card.cotacao > div._card-body > div > span",
+                "#cards-ticker > div._card.cotacao > div._card-body > div > span.value",
             )
             .inner_text()
             .strip()
