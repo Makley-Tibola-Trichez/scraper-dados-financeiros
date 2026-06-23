@@ -5,6 +5,7 @@ from gspread import Cell, Client
 from gspread.utils import ValueInputOption
 from playwright.sync_api import Page
 
+from dados_financeiros.fii.domain.constants import LISTA_DE_TICKERS_EXCLUSAO
 from dados_financeiros.utils.formatters import to_br_decimal
 from dados_financeiros.utils.progresso_processo import ProgressoProcessos
 
@@ -20,12 +21,15 @@ from ..utils.logger import logger
 def scrapper_fiis(gc: Client, spreadsheet_id: str, page: Page, conn: Connection) -> None:  # noqa: C901
     sheet = gc.open_by_key(spreadsheet_id).get_worksheet_by_id(Config.id_worksheet_fiis_base)
     tickers_existentes = cast(list[str], sheet.col_values(1))
+    tickers_existentes = tickers_existentes[1:]
+    tickers_existentes = list(set(tickers_existentes).difference(set(LISTA_DE_TICKERS_EXCLUSAO)))
+    tickers_existentes.sort()
 
     fii_repository = FiiRepository(conn, logger=logger)
     pagina_fii_gateway = FiiInvestidor10Gateway(page, logger)
     salvar_fii_use_case = SalvarFiiUseCase(logger, pagina_fii_gateway, fii_repository)
 
-    fiis: list[Fii] = salvar_fii_use_case.executar(tickers_existentes[1:])
+    fiis: list[Fii] = salvar_fii_use_case.executar(tickers_existentes)
 
     processo_atualizacao_planilhas_fiis = ProgressoProcessos(
         total_processos=len(fiis),

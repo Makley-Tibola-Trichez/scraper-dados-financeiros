@@ -5,7 +5,8 @@ from typing import cast
 from gspread import Cell, Client
 from gspread.utils import ValueInputOption
 from playwright.sync_api import Page
-from prefect import task
+
+from dados_financeiros.acao.domain.constants import LISTA_DE_TICKERS_EXCLUSAO
 
 from ..acao.application.salvar_dados_acoes_use_case import SalvarAcaoUseCase
 from ..acao.infrastructure.acao_investidor10_gateway import AcaoInvestidor10Gateway
@@ -18,7 +19,6 @@ from ..utils.logger import logger
 from ..utils.progresso_processo import ProgressoProcessos
 
 
-@task(name="Scrapper dados ações")
 def scrapper_acoes(
     gc: Client,
     spreadsheet_id: str,
@@ -27,13 +27,16 @@ def scrapper_acoes(
 ) -> None:
     sheet = gc.open_by_key(spreadsheet_id).get_worksheet_by_id(Config.id_worksheet_acoes_teto_bazin)
     tickers_existentes = cast(list[str], sheet.col_values(1))
+    tickers_existentes = tickers_existentes[2:]
+    tickers_existentes = list(set(tickers_existentes).difference(set(LISTA_DE_TICKERS_EXCLUSAO)))
+    tickers_existentes.sort()
 
     acao_repository = AcaoRepository(conn, logger)
     pagina_acao_gateway = AcaoInvestidor10Gateway(page, logger)
 
     salvar_acao_use_case = SalvarAcaoUseCase(logger, pagina_acao_gateway, acao_repository)
 
-    acoes = salvar_acao_use_case.executar(tickers_existentes[2:])
+    acoes = salvar_acao_use_case.executar(tickers_existentes)
 
     cells_to_update: list[Cell] = []
 
