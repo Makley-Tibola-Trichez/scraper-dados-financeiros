@@ -16,3 +16,7 @@ service_account.json
 
 # Log files
 .log
+
+# SQLite WAL sidecar files
+*.db-shm
+*.db-wal

@@ -1,8 +1,13 @@
-from logging import Logger
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from dados_financeiros.fii.domain.interfaces import IFiiInvestidor10Gateway, IFiiRepository
 from dados_financeiros.fii.domain.value_objects import Fii
 from dados_financeiros.utils.datetime import DatetimeUtils
+
+if TYPE_CHECKING:
+    from loguru import Logger
 
 
 class SalvarFiiUseCase:
@@ -31,7 +36,7 @@ class SalvarFiiUseCase:
                     fiis.append(fii)
                     self._logger.info(f"FII {ticker} inserido no banco de dados.")
                 except Exception as e:
-                    self._logger.error(f"Erro ao fazer scrape do FII {ticker}: {e}", exc_info=e)
-                    exit()
+                    self._logger.exception(f"Erro ao fazer scrape do FII {ticker}: {e}")
+                    continue
 
         return fiis

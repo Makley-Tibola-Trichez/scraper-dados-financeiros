@@ -86,13 +86,14 @@ class SalvarFiiUseCaseTest(unittest.TestCase):
         self.assertEqual(gateway.calls, ["KNRI11"])
         self.assertEqual(repository.inserted, [fii_novo])
 
-    def test_falha_rapido_quando_gateway_lanca_erro(self) -> None:
-        gateway = FakeGateway({}, failure_tickers={"FAIL11"})
+    def test_continua_para_proximo_ticker_quando_gateway_lanca_erro(self) -> None:
+        fii_novo = make_fii("NEXT11")
+        gateway = FakeGateway({"NEXT11": fii_novo}, failure_tickers={"FAIL11"})
         repository = FakeRepository()
         use_case = SalvarFiiUseCase(logging.getLogger("test"), gateway, repository)
 
-        with self.assertRaises(SystemExit):
-            use_case.executar(["FAIL11", "NEXT11"])
+        resultado = use_case.executar(["FAIL11", "NEXT11"])
 
-        self.assertEqual(gateway.calls, ["FAIL11"])
-        self.assertEqual(repository.inserted, [])
+        self.assertEqual(gateway.calls, ["FAIL11", "NEXT11"])
+        self.assertEqual(resultado, [fii_novo])
+        self.assertEqual(repository.inserted, [fii_novo])

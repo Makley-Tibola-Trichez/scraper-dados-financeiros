@@ -1,4 +1,6 @@
-from logging import Logger
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from playwright.sync_api import Locator, Page
 
@@ -7,6 +9,9 @@ from dados_financeiros.fii.domain.value_objects import Fii
 from dados_financeiros.utils.formatters import from_brl
 
 from ..domain.interfaces import IFiiInvestidor10Gateway
+
+if TYPE_CHECKING:
+    from loguru import Logger
 
 
 class FiiInvestidor10Gateway(IFiiInvestidor10Gateway):
@@ -149,7 +154,7 @@ class FiiInvestidor10Gateway(IFiiInvestidor10Gateway):
         return self.__obter_valor_de_informacoes_da_empresa("TIPO DE FUNDO")
 
     def obter_pvp(self) -> str:
-        seletor = "#cards-ticker > div._card.vp > div._card-body > span"
+        seletor = "#cards-ticker > div._card.vp > div._card-body > span:first-child"
         pvp = self._page.locator(seletor).text_content()
 
         if not pvp:

@@ -1,5 +1,10 @@
-from logging import Logger
+from __future__ import annotations
+
 from sqlite3 import Connection
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from loguru import Logger
 
 from dados_financeiros.fii.domain.interfaces import IFiiRepository
 from dados_financeiros.fii.domain.value_objects import Fii

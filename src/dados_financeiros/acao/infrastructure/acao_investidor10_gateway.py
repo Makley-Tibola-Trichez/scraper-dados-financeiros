@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from datetime import datetime
 from enum import StrEnum
-from logging import Logger
+from typing import TYPE_CHECKING
 
 from playwright.sync_api import Locator, Page
 
@@ -8,6 +10,9 @@ from dados_financeiros.acao.domain.interfaces import IAcaoInvestidor10Gateway
 from dados_financeiros.acao.domain.value_objects import Acao, Dividendo
 from dados_financeiros.errors import ElementoNaoEncontradoError
 from dados_financeiros.utils.formatters import from_brl
+
+if TYPE_CHECKING:
+    from loguru import Logger
 
 
 class TipoIndicador(StrEnum):
@@ -19,10 +24,10 @@ class TipoIndicador(StrEnum):
     PAYOUT = "payout"
     CAGR_RECEITAS_5_ANOS = "cagr receitas 5 anos"
     CAGR_LUCROS_5_ANOS = "cagr lucros 5 anos"
-    DIVIDA_LIQUIDA_PATRIMONIO = "dívida líquida / patrimônio"
-    DIVIDA_LIQUIDA_EBIT = "dívida líquida / ebit"
-    DIVIDA_LIQUIDA_EBITDA = "dívida líquida / ebitda"
-    DIVIDA_BRUTA_PATRIMONIO = "dívida bruta / patrimônio"
+    DIVIDA_LIQUIDA_PATRIMONIO = "divida liquida/patrimônio"
+    DIVIDA_LIQUIDA_EBIT = "divida liquida/ebit"
+    DIVIDA_LIQUIDA_EBITDA = "divida liquida/ebitda"
+    DIVIDA_BRUTA_PATRIMONIO = "divida bruta/patrimônio"
 
 
 class AcaoInvestidor10Gateway(IAcaoInvestidor10Gateway):
@@ -104,10 +109,14 @@ class AcaoInvestidor10Gateway(IAcaoInvestidor10Gateway):
         )
 
     def obter_pl(self) -> str:
-        return self._page.locator("#cards-ticker > div._card.val > div._card-body > span").inner_text().strip()
+        return (
+            self._page.locator("#cards-ticker > div._card.val > div._card-body > span:first-child").inner_text().strip()
+        )
 
     def obter_pvp(self) -> str:
-        return self._page.locator("#cards-ticker > div._card.vp > div._card-body > span").inner_text().strip()
+        return (
+            self._page.locator("#cards-ticker > div._card.vp > div._card-body > span:first-child").inner_text().strip()
+        )
 
     def obter_vpa(self) -> str:
         indicador = self._obter_indicador(TipoIndicador.VPA)
@@ -145,7 +154,9 @@ class AcaoInvestidor10Gateway(IAcaoInvestidor10Gateway):
         return indicador
 
     def obter_dy(self) -> str:
-        return self._page.locator("#cards-ticker > div._card.dy > div._card-body > span").inner_text().strip()
+        return (
+            self._page.locator("#cards-ticker > div._card.dy > div._card-body > span:first-child").inner_text().strip()
+        )
 
     def obter_payout(self) -> str:
         indicador = self._obter_indicador(TipoIndicador.PAYOUT)
@@ -216,9 +227,10 @@ class AcaoInvestidor10Gateway(IAcaoInvestidor10Gateway):
         try:
             indicadores = self.__scrape_indicadores()
             for indicador in indicadores:
-                texto_indicador = indicador.locator("span:has(~ div.value)").text_content()
+                texto_indicador = indicador.locator(".indicator-card-title > span").text_content()
+                # print(str(texto_indicador).strip().lower(), " ||| ", tipo_indicador.value)
                 if str(texto_indicador).strip().lower() == tipo_indicador.value:
-                    return indicador.locator("span ~ div.value").text_content()
+                    return indicador.locator(".indicator-card-value > span").text_content()
 
             return None
         except Exception as _:
@@ -226,7 +238,7 @@ class AcaoInvestidor10Gateway(IAcaoInvestidor10Gateway):
             return None
 
     def __scrape_indicadores(self) -> list[Locator]:
-        indicadores = self._page.locator("#table-indicators > div")
+        indicadores = self._page.locator("#table-indicators .indicator-card")
 
         return [indicadores.nth(i) for i in range(indicadores.count())]
 

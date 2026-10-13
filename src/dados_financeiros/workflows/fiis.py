@@ -5,7 +5,6 @@ from gspread import Cell, Client
 from gspread.utils import ValueInputOption
 from playwright.sync_api import Page
 
-from dados_financeiros.fii.domain.constants import LISTA_DE_TICKERS_EXCLUSAO
 from dados_financeiros.utils.formatters import to_br_decimal
 from dados_financeiros.utils.progresso_processo import ProgressoProcessos
 
@@ -14,22 +13,22 @@ from ..fii.application.salvar_dados_fiis_use_case import SalvarFiiUseCase
 from ..fii.domain.value_objects import Fii
 from ..fii.infrastructure.fii_investidor10_gateway import FiiInvestidor10Gateway
 from ..fii.infrastructure.fii_repository import FiiRepository
-from ..sheet.fiis_cells import FiisCells, FiisCols
+from ..sheet.cell_builder import build_cells
+from ..sheet.fiis_cols import FiisCols
 from ..utils.logger import logger
 
 
-def scrapper_fiis(gc: Client, spreadsheet_id: str, page: Page, conn: Connection) -> None:  # noqa: C901
+def scrapper_fiis(gc: Client, spreadsheet_id: str, page: Page, conn: Connection) -> None:
     sheet = gc.open_by_key(spreadsheet_id).get_worksheet_by_id(Config.id_worksheet_fiis_base)
     tickers_existentes = cast(list[str], sheet.col_values(1))
-    tickers_existentes = tickers_existentes[1:]
-    tickers_existentes = list(set(tickers_existentes).difference(set(LISTA_DE_TICKERS_EXCLUSAO)))
-    tickers_existentes.sort()
+    # tickers_existentes = list(set(tickers_existentes).difference(set(LISTA_DE_TICKERS_EXCLUSAO)))
+    # tickers_existentes.sort()
 
     fii_repository = FiiRepository(conn, logger=logger)
     pagina_fii_gateway = FiiInvestidor10Gateway(page, logger)
     salvar_fii_use_case = SalvarFiiUseCase(logger, pagina_fii_gateway, fii_repository)
 
-    fiis: list[Fii] = salvar_fii_use_case.executar(tickers_existentes)
+    fiis: list[Fii] = salvar_fii_use_case.executar(tickers_existentes[1:])
 
     processo_atualizacao_planilhas_fiis = ProgressoProcessos(
         total_processos=len(fiis),
@@ -43,65 +42,29 @@ def scrapper_fiis(gc: Client, spreadsheet_id: str, page: Page, conn: Connection)
         logger.info(f"{fii.ticker}, gerando células com novos valores")
         linha = tickers_existentes.index(fii.ticker) + 1
 
-        fii_cells = FiisCells(linha)
+        valores: list[tuple[FiisCols, str | None]] = [
+            (FiisCols.TIPO_DE_FUNDO, fii.tipo_de_fundo),
+            (FiisCols.SEGMENTO, fii.segmento),
+            (FiisCols.COTACAO, to_br_decimal(fii.cotacao)),
+            (FiisCols.PVP, fii.pvp),
+            (FiisCols.DIVDENDO_1M, fii.dividendo_1_mes),
+            (FiisCols.DIVIDENDO_3M, fii.dividendo_3_meses),
+            (FiisCols.DIVIDENDO_6M, fii.dividendo_6_meses),
+            (FiisCols.DIVIDENDO_12M, fii.dividendo_12_meses),
+            (FiisCols.DY_1M, fii.dividend_yield_1_mes),
+            (FiisCols.DY_3M, fii.dividend_yield_3_meses),
+            (FiisCols.DY_6M, fii.dividend_yield_6_meses),
+            (FiisCols.DY_12M, fii.dividend_yield_12_meses),
+            (FiisCols.QUANTIDADE_COTAS, fii.quantidade_cotas_emitidas),
+            (FiisCols.VALOR_PATRIMONIAL_POR_COTA, fii.valor_patrimonial_por_cota),
+        ]
 
-        tipo_de_fundo = fii_cells.make_cell(FiisCols.TIPO_DE_FUNDO, fii.tipo_de_fundo)
-        if tipo_de_fundo:
-            cells_to_update.append(tipo_de_fundo)
+        cells_to_update.extend(build_cells(linha, valores))
 
-        segmento = fii_cells.make_cell(FiisCols.SEGMENTO, fii.segmento)
-        if segmento:
-            cells_to_update.append(segmento)
+    if not cells_to_update:
+        logger.warning("Nenhuma célula para atualizar (nenhum FII processado com sucesso)")
+        return
 
-        cotacao = fii_cells.make_cell(FiisCols.COTACAO, to_br_decimal(fii.cotacao))
-        if cotacao:
-            cells_to_update.append(cotacao)
-
-        pvp = fii_cells.make_cell(FiisCols.PVP, fii.pvp)
-        if pvp:
-            cells_to_update.append(pvp)
-
-        dividendo_1m = fii_cells.make_cell(FiisCols.DIVDENDO_1M, fii.dividendo_1_mes)
-        if dividendo_1m:
-            cells_to_update.append(dividendo_1m)
-
-        dividendo_3m = fii_cells.make_cell(FiisCols.DIVIDENDO_3M, fii.dividendo_3_meses)
-        if dividendo_3m:
-            cells_to_update.append(dividendo_3m)
-
-        dividendo_6m = fii_cells.make_cell(FiisCols.DIVIDENDO_6M, fii.dividendo_6_meses)
-        if dividendo_6m:
-            cells_to_update.append(dividendo_6m)
-
-        dividendo_12m = fii_cells.make_cell(FiisCols.DIVIDENDO_12M, fii.dividendo_12_meses)
-        if dividendo_12m:
-            cells_to_update.append(dividendo_12m)
-
-        dy_1m = fii_cells.make_cell(FiisCols.DY_1M, fii.dividend_yield_1_mes)
-        if dy_1m:
-            cells_to_update.append(dy_1m)
-
-        dy_3m = fii_cells.make_cell(FiisCols.DY_3M, fii.dividend_yield_3_meses)
-        if dy_3m:
-            cells_to_update.append(dy_3m)
-
-        dy_6m = fii_cells.make_cell(FiisCols.DY_6M, fii.dividend_yield_6_meses)
-        if dy_6m:
-            cells_to_update.append(dy_6m)
-
-        dy_12m = fii_cells.make_cell(FiisCols.DY_12M, fii.dividend_yield_12_meses)
-        if dy_12m:
-            cells_to_update.append(dy_12m)
-
-        quantidade_cotas = fii_cells.make_cell(FiisCols.QUANTIDADE_COTAS, fii.quantidade_cotas_emitidas)
-        if quantidade_cotas:
-            cells_to_update.append(quantidade_cotas)
-
-        valor_patrimonial_por_cota = fii_cells.make_cell(
-            FiisCols.VALOR_PATRIMONIAL_POR_COTA, fii.valor_patrimonial_por_cota
-        )
-        if valor_patrimonial_por_cota:
-            cells_to_update.append(valor_patrimonial_por_cota)
     logger.info("Atualizando planilha")
     sheet.update_cells(cells_to_update, value_input_option=ValueInputOption.user_entered)
     logger.info("Planilha atualizada")

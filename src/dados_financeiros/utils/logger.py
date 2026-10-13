@@ -1,19 +1,9 @@
-import logging
 import sys
 
-LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+from loguru import logger
 
-file_handler = logging.FileHandler(".log", mode="w", encoding="utf-8")
-file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+LOG_FORMAT = "{time:YYYY-MM-DD HH:mm:ss} - {name} - {level} - {message}"
 
-console_handler = logging.StreamHandler(sys.stdout)
-console_handler.setFormatter(logging.Formatter(LOG_FORMAT))
-
-logging.basicConfig(
-    level=logging.INFO,
-    handlers=[file_handler, console_handler],
-    force=True,
-)
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.remove()
+logger.add(sys.stdout, format=LOG_FORMAT, level="INFO")
+logger.add(".log", format=LOG_FORMAT, level="INFO", rotation="10 MB", retention="10 days", encoding="utf-8")

@@ -1,8 +1,13 @@
-from logging import Logger
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from dados_financeiros.acao.domain.interfaces import IAcaoInvestidor10Gateway, IAcaoRepository
 from dados_financeiros.acao.domain.value_objects import Acao
 from dados_financeiros.utils.datetime import DatetimeUtils
+
+if TYPE_CHECKING:
+    from loguru import Logger
 
 
 class SalvarAcaoUseCase:
@@ -34,7 +39,7 @@ class SalvarAcaoUseCase:
                     self._logger.info(f"Ação {ticker} inserida no banco de dados.")
 
                 except Exception as e:
-                    self._logger.error(f"Erro ao fazer scrape da ação {ticker}: {e}", exc_info=e)
-                    exit()
+                    self._logger.exception(f"Erro ao fazer scrape da ação {ticker}: {e}")
+                    continue
 
         return acoes

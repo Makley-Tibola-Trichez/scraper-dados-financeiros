@@ -1,7 +1,5 @@
 from enum import Enum
 
-from gspread.cell import Cell
-
 
 class FiisCols(Enum):
     TICKER = 1
@@ -20,20 +18,3 @@ class FiisCols(Enum):
     DY_12M = DY_6M + 1
     QUANTIDADE_COTAS = DY_12M + 1
     VALOR_PATRIMONIAL_POR_COTA = QUANTIDADE_COTAS + 1
-
-
-class FiisCells:
-    def __init__(self, row: int) -> None:
-        self.row = row
-
-    def make_cell(
-        self,
-        col_enum: FiisCols,
-        value: str | None,
-    ) -> Cell | None:
-        if value is not None:
-            return self.make_cell_trusted(col_enum, value)
-        return None
-
-    def make_cell_trusted(self, col_enum: FiisCols, value: str):
-        return Cell(self.row, col_enum.value, value)

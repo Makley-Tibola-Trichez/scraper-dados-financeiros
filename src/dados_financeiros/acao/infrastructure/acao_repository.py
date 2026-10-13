@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 import json
 from datetime import datetime
-from logging import Logger
 from sqlite3 import Connection
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from dados_financeiros.acao.domain.interfaces import IAcaoRepository
 from dados_financeiros.acao.domain.value_objects import Acao, Dividendo
+
+if TYPE_CHECKING:
+    from loguru import Logger
 
 
 class AcaoRepository(IAcaoRepository):
